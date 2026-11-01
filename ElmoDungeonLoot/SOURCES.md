@@ -82,3 +82,15 @@ type IDs. It does not infer an item's armor type or slot from its English name.
 `GetItemInfoInstant` supplies type/slot/icon information when available before the
 full native item cache loads. Tests cover material/slot alternatives, aliases,
 robes, one/two-handed weapons, off-hand items, cold-cache metadata and actual rows.
+
+## Forever API verification
+
+Interface 16001 uses the shared runtime. Compared with the [Blizzard Forever UI/API source](https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns), revision `ca8368f2f2380cbe696854f7f2646387c278a61b`: nameplate unit-frame health anchors and guarded hit-test methods, `C_Spell` cooldown/charge duration objects, aura readers, restricted combat-log detection and `C_QuestLog` readers. Capability checks and secret-value guards preserve client restrictions. Tests in `scripts/tests/test_forever.py` are offline simulations and do not certify live C++ rendering or native click overlap.
+
+## Separate Forever catalogue
+
+`CatalogForever.lua` and `QuestCatalogForever.lua` are compiled factual data, selected by `scripts/build.py` for the Forever package. They do not require the former ForeverDungeonLoot or route planner at runtime. The Era catalogue is never used as a fallback for Forever items.
+
+Loot associations and bundled stats come from the local [ForeverChanges dungeon snapshot](https://foreverchanges.pro/dungeons), retrieved 2026-10-18, source build 1.60.1.70425, observations through 2026-10-03; SHA-256 `ab3d3342dbebd379151ead0d14380e30fa9a8da962461202cae14f275330793f`. The source is unofficial and includes data-mined/incomplete encounters. Quest membership, faction/class variants, chains and giver coordinates reuse the locally generated Forever preparation snapshot, based on [QuestieDB](https://github.com/Questie/QuestieDB) revision `e9a67d1a2753a0e64c4c96bf7864788fac7b765f` plus documented ForeverChanges/Hall of Thanes corrections. NPC level bounds come from that same pinned QuestieDB snapshot. Unavailable facts remain missing. `Catalog.meta` records both input hashes. Original static source data/derived factual associations are not a live guarantee of current server drops.
+
+To regenerate explicitly: `python scripts/build_forever_catalog.py --loot /path/to/source_catalog.json --quests /path/to/Forever-preparation-Data.lua --database /path/to/pinned-QuestieDB`. This needs `lupa.lua51` and the pinned development inputs. Normal packaging uses only the committed catalogues and Python standard library. No upstream runtime code is included.

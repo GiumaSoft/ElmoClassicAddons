@@ -201,7 +201,8 @@ function U.RenderLoot(reset)
     for i=count+1,#U.lootRows do U.lootRows[i]:Hide();U.lootRows[i].item=nil end
     sc:Finish(offset+8,reset)
     U.lootCount:SetText(drops.." / "..total.." drops · "..encounters.." groups")
-    U.searchEmpty:SetText(err and "Fix the search expression above." or "No items match this search in the selected dungeon.")
+    U.searchEmpty:SetText(err and "Fix the search expression above." or
+        (total==0 and "No drop table recorded for this dungeon." or "No items match this search in the selected dungeon."))
     U.searchEmpty:SetShown(drops==0)
 end
 
@@ -292,7 +293,8 @@ function U.Render(reset)
     local dungeon=CD.Catalog.dungeons[CD.db.lastDungeon]
     U.dropdown.label:SetText(dungeon.name)
     local levels=dungeon.levels
-    U.description:SetText("Recommended "..table.concat(levels,"–").." · Minimum entry level "..dungeon.minimumLevel)
+    U.description:SetText("Recommended "..table.concat(levels,"–").." · Minimum entry level "..
+        (dungeon.minimumLevel or "not recorded"))
     local who=CD.Items.Character()
     U.character:SetText(who.faction.." · "..(who.className or who.class or "Character").." · Level "..who.level)
     U.RenderLoot(reset);U.RenderQuests(reset)

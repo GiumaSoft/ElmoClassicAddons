@@ -37,6 +37,13 @@ def build(source, client):
     if dependencies:
         text = "## OptionalDeps: " + ", ".join(dict.fromkeys(dependencies)) + "\n" + text
     toc.write_text(text)
+    if name == "ElmoDungeonLoot" and client == "forever":
+        for filename in ("Catalog.lua", "QuestCatalog.lua"):
+            shutil.copyfile(source / (filename[:-4] + "Forever.lua"), stage / filename)
+    if name == "ElmoDungeonLoot":
+        # The package contains only its client's factual catalogues.
+        for filename in ("CatalogForever.lua", "QuestCatalogForever.lua"):
+            (stage / filename).unlink()
     if name == "ElmoLeveling":
         (stage / "Client.lua").write_text(f'local _, A = ...\nA.flavor = "{client}"\n')
     for line in text.splitlines():
@@ -66,7 +73,7 @@ def main():
     for source in sorted(ROOT.glob("Elmo*")):
         if not source.is_dir() or not (source / (source.name + ".toc")).is_file():
             continue
-        clients = ["classic", "forever"] if source.name == "ElmoLeveling" else ["classic"]
+        clients = ["classic", "forever"]
         reports.extend(build(source, client) for client in clients)
     (ROOT / ".build-report.json").write_text(json.dumps({"packages": reports}, indent=2) + "\n")
 

@@ -174,7 +174,7 @@ f:SetScript("OnEvent",function(_,event,...)
     if not A.db then return end
     if event=="UNIT_SPELLCAST_SUCCEEDED" then
         local unit,_,id=...
-        if unit=="player" then A.Observe(id) end
+        if A.Text(unit)=="player" then A.Observe(id) end
     elseif event=="SPELL_DATA_LOAD_RESULT" or event=="SPELLS_CHANGED" or event=="PLAYER_ENTERING_WORLD" then
         A.Refresh()
     elseif event=="UNIT_POWER_UPDATE" or event=="UNIT_MAXPOWER" or event=="UNIT_DISPLAYPOWER" then

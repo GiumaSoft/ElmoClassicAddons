@@ -25,10 +25,11 @@ function CD.Bool(value)
     if not CD.IsSecret(value) and type(value) == "boolean" then return value end
 end
 
+local function checked(ok, ...)
+    if ok then return ... end
+end
 function CD.Call(fn, ...)
-    if type(fn) ~= "function" then return nil end
-    local result = {pcall(fn, ...)}
-    if result[1] then return unpack(result, 2) end
+    if type(fn) == "function" then return checked(pcall(fn, ...)) end
 end
 
 function CD.Print(message)

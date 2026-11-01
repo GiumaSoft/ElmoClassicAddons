@@ -79,8 +79,12 @@ function A.Clear()
 end
 
 function A.Add(unit)
-    local guid = UnitGUID(unit)
-    if type(guid) ~= "string" or not (guid:match("^Creature%-") or guid:match("^Vehicle%-")) then return end
+    unit = A.Text(unit)
+    if not unit then return end
+    local guid = A.Text(A.Call(UnitGUID, unit))
+    if not guid or not (guid:match("^Creature%-") or guid:match("^Vehicle%-")) then
+        A.Remove(unit); return
+    end
     local plate = C_NamePlate.GetNamePlateForUnit(unit)
     if not plate or plate:IsForbidden() then return end
     local native = plate.UnitFrame
@@ -105,24 +109,33 @@ end
 
 local function scan(record)
     local auras = {}
+    record.aurasKnown = true
     for i = 1, 255 do
         local data
         if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
-            data = C_UnitAuras.GetAuraDataByIndex(record.unit, i, "HARMFUL|PLAYER")
+            local ok
+            ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, record.unit, i, "HARMFUL|PLAYER")
+            if not ok then record.aurasKnown = false; break end
         elseif UnitDebuff then
             local name, icon, count, _, duration, expires, source, _, _, id = UnitDebuff(record.unit, i, "PLAYER")
             if name then data = {name = name, icon = icon, applications = count, duration = duration,
                 expirationTime = expires, sourceUnit = source, spellId = id} end
         end
-        if not data then break end
-        local source, expires = data.sourceUnit, A.Number(data.expirationTime) or 0
-        if source and (source == "player" or UnitIsUnit(source, "player")) and
+        if A.Secret(data) then record.aurasKnown = false; break end
+        if type(data) ~= "table" then break end
+        local source, expires = A.Text(data.sourceUnit), A.Number(data.expirationTime) or 0
+        if A.Secret(data.sourceUnit) or A.Secret(data.spellId) then record.aurasKnown = false end
+        if source and (source == "player" or A.Bool(A.Call(UnitIsUnit, source, "player")) == true) and
             (expires == 0 or expires > GetTime()) then
-            auras[#auras + 1] = {name = data.name, id = A.Number(data.spellId), icon = data.icon,
+            auras[#auras + 1] = {name = A.Text(data.name), id = A.Number(data.spellId), icon = A.Number(data.icon),
                 expires = expires, count = A.Number(data.applications) or 0}
         end
     end
     record.auras = auras
+    -- A visible personal harmful aura is evidence even when the combat log is unavailable.
+    if #auras > 0 and A.Bool(A.Call(UnitAffectingCombat, "player")) == true then
+        A.attacked[record.guid] = true
+    end
 end
 
 local function icon(record, index)
@@ -140,11 +153,11 @@ local function icon(record, index)
 end
 
 function A.Missing(record)
-    if not UnitCanAttack("player", record.unit) then return false end
+    if record.aurasKnown == false or A.Bool(A.Call(UnitCanAttack, "player", record.unit)) ~= true then return false end
     local watch = A.db.watchDebuff
     if watch == "" then return #record.auras == 0 end
     local id = tonumber(watch)
-    local name = id and A.Call(C_Spell and C_Spell.GetSpellName, id) or watch
+    local name = id and A.Text(A.Call(C_Spell and C_Spell.GetSpellName, id)) or watch
     for _, aura in ipairs(record.auras) do
         if (id and aura.id == id) or (type(name) == "string" and type(aura.name) == "string" and
             aura.name:lower() == name:lower()) then return false end
@@ -181,8 +194,17 @@ end
 
 local function render(record, now)
     local unit, f = record.unit, record.frame
-    if not unit or UnitGUID(unit) ~= record.guid or not record.plate:IsShown() or UnitIsDeadOrGhost(unit) or
-        (C_NamePlateManager and A.Call(C_NamePlateManager.IsNamePlateUnitBehindCamera, unit)) then
+    local guid = unit and A.Text(A.Call(UnitGUID, unit))
+    local hp, max = A.Number(A.Call(UnitHealth, unit)), A.Number(A.Call(UnitHealthMax, unit))
+    -- Never leave native artwork hidden when the client withholds identity or health.
+    if not guid or not hp or not max then
+        if record.native then A.Call(record.native.SetAlpha, record.native, record.alpha or 1) end
+        record.priority = false
+        f:ClearAllPoints(); f:SetAllPoints(record.bounds)
+        f:Hide(); return false
+    end
+    if not unit or guid ~= record.guid or not record.plate:IsShown() or A.Bool(A.Call(UnitIsDeadOrGhost, unit)) == true or
+        A.Bool(A.Call(C_NamePlateManager and C_NamePlateManager.IsNamePlateUnitBehindCamera, unit)) == true then
         f:Hide(); return false
     end
     -- Rebind safely if Blizzard replaces a pooled unit frame.
@@ -194,24 +216,25 @@ local function render(record, now)
     end
     f:SetAlpha(A.Number(A.Call(record.plate.GetAlpha, record.plate)) or 1)
     record.native:SetAlpha(0)
-    local hp, max = A.Number(UnitHealth(unit)), A.Number(UnitHealthMax(unit))
     record.health = hp and max and max > 0 and math.max(0, hp) or math.huge
     record.fraction = hp and max and max > 0 and math.max(0, math.min(1, hp / max)) or 2
     f.bar:SetMinMaxValues(0, 1); f.bar:SetValue(record.fraction <= 1 and record.fraction or 0)
     f.percent:SetText(record.fraction <= 1 and math.floor(record.fraction * 100 + .5) .. "%" or "?")
-    local denied = A.Call(UnitIsTapDenied, unit) == true
+    local denied = A.Bool(A.Call(UnitIsTapDenied, unit)) == true
     local r, g, b, border = .85, .12, .12, 1
     if denied then r, g, b, border = .55, .55, .55, .025
-    elseif not UnitCanAttack("player", unit) then r, g, b, border = .1, .8, .2, .025
+    elseif A.Bool(A.Call(UnitCanAttack, "player", unit)) == false then r, g, b, border = .1, .8, .2, .025
     elseif (A.Number(A.Call(UnitReaction, unit, "player")) or 3) >= 4 and
-        A.Call(UnitAffectingCombat, unit) ~= true then r, g, b, border = 1, .82, 0, .025 end
+        (not UnitAffectingCombat or A.Bool(A.Call(UnitAffectingCombat, unit)) == false) then
+        r, g, b, border = 1, .82, 0, .025
+    end
     f.bar:SetStatusBarColor(r, g, b)
     record.borderShade = border
-    f.name:SetText((UnitName(unit) or "") .. (denied and " [CLAIMED]" or ""))
+    f.name:SetText((A.Text(A.Call(UnitName, unit)) or "") .. (denied and " [CLAIMED]" or ""))
     local level = A.Number(UnitLevel(unit))
     f.level:SetText(level == -1 and "Lv. ??" or (level and level > 0 and "Lv. " .. level or "Lv. ?"))
     f.level:SetTextColor(A.LevelColor(level))
-    record.selected = UnitGUID("target") == record.guid
+    record.selected = A.Text(A.Call(UnitGUID, "target")) == record.guid
     for i = #record.auras, 1, -1 do
         if record.auras[i].expires > 0 and record.auras[i].expires <= now then table.remove(record.auras, i) end
     end
@@ -236,7 +259,7 @@ function A.Update(refreshAuras, changedUnit)
     local list, now = {}, GetTime()
     for _, record in pairs(A.units) do
         if refreshAuras and (not changedUnit or changedUnit == record.unit) and
-            record.unit and UnitGUID(record.unit) == record.guid then scan(record) end
+            record.unit and A.Text(A.Call(UnitGUID, record.unit)) == record.guid then scan(record) end
         if render(record, now) then list[#list + 1] = record end
     end
     table.sort(list, A.Better)
@@ -247,7 +270,7 @@ function A.Update(refreshAuras, changedUnit)
         record.frame.bar:SetFrameLevel(level + 1)
         for _, child in ipairs(record.frame.icons) do child:SetFrameLevel(level + 2) end
         local priority = firstPriority and A.attacked[record.guid] == true and
-            UnitCanAttack("player", record.unit) == true
+            A.Bool(A.Call(UnitCanAttack, "player", record.unit)) == true
         record.priority = priority
         -- Measure only our UIParent-based bounds. Bound click points follow this owned rectangle.
         local height = A.Number(A.Call(record.bounds.GetHeight, record.bounds)) or 0

@@ -1,6 +1,6 @@
 # ElmoSpellTracker 1.0.2
 
-A standalone **WoW Classic Era** addon. Your successfully used player abilities
+A standalone **WoW Classic Era and Forever** addon. Your successfully used player abilities
 with their own cooldown are learned automatically and displayed in one horizontal bar.
 The interface is English. No libraries are required.
 
@@ -34,7 +34,7 @@ charge is available. A temporarily unreadable cooldown is marked `?`, not ready.
 
 ## Setup and controls
 
-Restart Classic Era after installing this new addon, enable **ElmoSpellTracker**
+Restart the selected WoW client after installing this new addon, enable **ElmoSpellTracker**
 in the AddOns list, then enter the world.
 
 ```
@@ -81,3 +81,9 @@ Pinned API references and the implementation boundaries are in `SOURCES.md`.
 ## Elmo migration
 
 Settings are imported from ClassicSpellsTracker, ClassicCooldownTracker. Legacy settings import remains supported when previous data is available. Restart WoW after installing the new folder. Release version is unchanged.
+
+## Client packages
+
+Choose the `classic` package for Interface 11509 or `forever` for Interface 16001. Both are built from the same source project; the release version is unchanged. Install only the package for your client. Automated checks simulate the APIs; loading and rendering in the actual Forever client still need verification.
+
+Modern `C_Spell` cooldown/charge duration APIs and spell usability are preferred, with legacy fallbacks. Private cooldowns remain grey with `?` until readable; private spell IDs are not learned. Resource changes wake the bar even while cooldowns are idle.

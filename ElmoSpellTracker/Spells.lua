@@ -13,7 +13,7 @@ end
 
 function S.Info(id)
     local info=call(C_Spell and C_Spell.GetSpellInfo,id)
-    if type(info)=="table" and txt(info.name) then
+    if not A.Secret(info) and type(info)=="table" and txt(info.name) then
         return {id=id,name=info.name,icon=num(info.iconID) or num(info.originalIconID)}
     end
     local name,_,icon=call(GetSpellInfo,id)
@@ -51,18 +51,18 @@ end
 
 local function cooldown(id)
     local info=call(C_Spell and C_Spell.GetSpellCooldown,id)
-    if type(info)=="table" then
+    if not A.Secret(info) and type(info)=="table" then
         return {start=num(info.startTime),duration=num(info.duration),enabled=bool(info.isEnabled),active=bool(info.isActive)}
     end
     local start,duration,enabled=call(GetSpellCooldown,id)
     if num(start) and num(duration) then
-        return {start=start,duration=duration,enabled=enabled~=0 and enabled~=false}
+        return {start=start,duration=duration,enabled=not A.Secret(enabled) and enabled~=0 and enabled~=false}
     end
 end
 
 local function charges(id)
     local info=call(C_Spell and C_Spell.GetSpellCharges,id)
-    if type(info)=="table" then
+    if not A.Secret(info) and type(info)=="table" then
         return {current=num(info.currentCharges),max=num(info.maxCharges),
             start=num(info.cooldownStartTime),duration=num(info.cooldownDuration)}
     end
@@ -71,7 +71,7 @@ local function charges(id)
 end
 
 local function remaining(object)
-    if object then return num(call(object.GetRemainingDuration,object)) end
+    if not A.Secret(object) and object then return num(call(object.GetRemainingDuration,object)) end
 end
 
 local function gcdOnly(info)

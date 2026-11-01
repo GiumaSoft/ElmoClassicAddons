@@ -1,6 +1,6 @@
 # ElmoPlater 2.0.7 prototype
 
-A fresh Classic Era nameplate prototype, with native positioning and native clicks.
+A shared Classic Era / Forever nameplate prototype, with native positioning and native clicks.
 
 - Solid-colour rectangular health bar without a gradient, health percentage, name and level.
 - Red hostile or attackable neutral in combat, yellow attackable neutral out of combat, green non-attackable friendly; grey and CLAIMED for a denied tap. Red bars have white borders.
@@ -32,3 +32,9 @@ All settings and messages are English. This is a prototype: Lua 5.1 checks use s
 ## Elmo migration
 
 Settings are imported from ClassicPlater, ClassicTarget. Legacy settings import remains supported when previous data is available. Restart WoW after installing the new folder. Release version is unchanged.
+
+## Client packages
+
+Choose the `classic` package for Interface 11509 or `forever` for Interface 16001. Both are built from the same source project; the release version is unchanged. Install only the package for your client. Automated checks simulate the APIs; loading and rendering in the actual Forever client still need verification.
+
+Combat-log registration is capability-checked. If the log is restricted, visible personal harmful auras can still identify attacked mobs; damage-only attack history is unavailable. If unit identity or health is private, the addon leaves Blizzard artwork visible instead of hiding the health bar or fabricating priority. Restricted aura data is not treated as a missing debuff.

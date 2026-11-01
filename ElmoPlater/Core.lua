@@ -15,6 +15,28 @@ function A.Number(v)
     if type(issecretvalue) == "function" and issecretvalue(v) then return end
     if type(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge then return v end
 end
+function A.Secret(v)
+    return type(issecretvalue) == "function" and issecretvalue(v)
+end
+function A.Text(v)
+    if not A.Secret(v) and type(v) == "string" then return v end
+end
+function A.Bool(v)
+    if not A.Secret(v) and type(v) == "boolean" then return v end
+end
+function A.CombatLogAvailable()
+    local restricted = A.Call(C_CombatLog and C_CombatLog.IsCombatLogRestricted)
+    return not A.Secret(restricted) and restricted ~= true and
+        type(C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo) == "function"
+end
+function A.RegisterCombatLog()
+    if A.CombatLogAvailable() then
+        local valid = A.Call(C_EventUtils and C_EventUtils.IsEventValid, "COMBAT_LOG_EVENT_UNFILTERED")
+        if A.Bool(valid) ~= false then A.Call(A.frame.RegisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED") end
+    else
+        A.Call(A.frame.UnregisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED")
+    end
+end
 function A.Print(text)
     DEFAULT_CHAT_FRAME:AddMessage("|cffffd100ElmoPlater:|r " .. text)
 end
@@ -63,12 +85,13 @@ end
 
 function A.CombatLog(...)
     local _, event, _, source, _, _, _, dest = ...
-    if type(dest) ~= "string" or not (dest:match("^Creature%-") or dest:match("^Vehicle%-")) then return end
+    event, source, dest = A.Text(event), A.Text(source), A.Text(dest)
+    if not event or not dest or not (dest:match("^Creature%-") or dest:match("^Vehicle%-")) then return end
     if event == "UNIT_DIED" or event == "UNIT_DESTROYED" then
         A.attacked[dest] = nil; A.Update(false)
-    elseif source == UnitGUID("player") then
+    elseif source and source == A.Text(A.Call(UnitGUID,"player")) then
         local damage = event:match("_DAMAGE$") or event:match("_MISSED$") or event == "DAMAGE_SHIELD"
-        local debuff = (event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH") and select(15, ...) == "DEBUFF"
+        local debuff = (event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH") and A.Text(select(15, ...)) == "DEBUFF"
         if damage or debuff then A.attacked[dest] = true; A.Update(false) end
     end
 end
@@ -98,6 +121,7 @@ function A.Initialize()
     A.db.plateAuraSize = math.max(14, math.min(36, A.Number(A.db.plateAuraSize) or 22))
     A.ready = A.Recover()
     if not A.ready then return end
+    A.RegisterCombatLog()
     SLASH_CLASSICPLATER1, SLASH_CLASSICPLATER2 = "/cplater", "/classicplater"
     SLASH_CLASSICPLATER3, SLASH_CLASSICPLATER4 = "/ctarget", "/classictarget"
     SlashCmdList.CLASSICPLATER = A.Command
@@ -117,10 +141,11 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
         if event == "NAME_PLATE_UNIT_ADDED" then A.Add(unit)
         elseif event == "NAME_PLATE_UNIT_REMOVED" then A.Remove(unit)
         elseif event == "PLAYER_LOGOUT" or event == "PLAYER_LEAVING_WORLD" then A.Clear()
-        elseif event == "PLAYER_ENTERING_WORLD" then A.Scan()
-        elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then A.CombatLog(CombatLogGetCurrentEventInfo())
+        elseif event == "PLAYER_ENTERING_WORLD" then A.RegisterCombatLog(); A.Scan()
+        elseif event == "COMBAT_LOG_EVENT_UNFILTERED" and A.CombatLogAvailable() then
+            A.CombatLog(A.Call(C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo))
         elseif event == "CVAR_UPDATE" then
-            if type(unit) == "string" and unit:lower():match("^nameplate") then
+            if A.Text(unit) and unit:lower():match("^nameplate") then
                 for _, record in pairs(A.units) do record.clickBound, record.clickFailed = false, false end
             end
         elseif event == "UNIT_AURA" then A.Update(true, unit)
@@ -130,8 +155,8 @@ end)
 for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "NAME_PLATE_UNIT_ADDED",
     "NAME_PLATE_UNIT_REMOVED", "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_FACTION", "UNIT_FLAGS",
     "PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT",
-    "COMBAT_LOG_EVENT_UNFILTERED", "CVAR_UPDATE"}) do
-    A.frame:RegisterEvent(event)
+    "CVAR_UPDATE"}) do
+    A.Call(A.frame.RegisterEvent, A.frame, event)
 end
 A.frame:SetScript("OnUpdate", function(_, dt)
     if not A.ready then return end

@@ -5,7 +5,7 @@ import os
 from lupa.lua51 import LuaRuntime
 
 HERE=Path(__file__).parent
-ADDON = Path(__file__).resolve().parents[3] / "ElmoSpellTracker"
+ADDON = Path(os.environ.get('ELMO_TEST_ADDON', Path(__file__).resolve().parents[3] / "ElmoSpellTracker"))
 
 class CooldownTests(unittest.TestCase):
     def setUp(self):

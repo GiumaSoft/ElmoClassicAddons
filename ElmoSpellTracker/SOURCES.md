@@ -51,3 +51,7 @@ Spell artwork, spell data, the game fonts and native tooltips are supplied by th
 `C_Spell.IsSpellUsable(spellID)` returns `insufficientPower` as its second result, explicitly covering mana, rage and other resources. That flag controls resource greying independently of cooldown status. `IsUsableSpell` supplies the legacy fallback. Player `UNIT_POWER_UPDATE`, `UNIT_MAXPOWER`, `UNIT_DISPLAYPOWER` and `SPELL_UPDATE_USABLE` wake the display after it becomes idle.
 
 Reference: [Classic Era Spell API](https://github.com/Gethe/wow-ui-source/blob/4192ac60067fc55566182291bc67c85dd9b6794d/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpellDocumentation.lua#L631).
+
+## Forever API verification
+
+Interface 16001 uses the shared runtime. Compared with the [Blizzard Forever UI/API source](https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns), revision `ca8368f2f2380cbe696854f7f2646387c278a61b`: nameplate unit-frame health anchors and guarded hit-test methods, `C_Spell` cooldown/charge duration objects, aura readers, restricted combat-log detection and `C_QuestLog` readers. Capability checks and secret-value guards preserve client restrictions. Tests in `scripts/tests/test_forever.py` are offline simulations and do not certify live C++ rendering or native click overlap.

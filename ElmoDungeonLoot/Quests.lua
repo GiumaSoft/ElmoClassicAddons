@@ -4,7 +4,7 @@ CD.Quests=Q
 local call=CD.Call
 
 local function intersects(a,b)
-    for id=1,12 do
+    for id=1,53 do
         if CD.Items.HasMask(a,id) and CD.Items.HasMask(b,id) then return true end
     end
     return false
@@ -12,18 +12,28 @@ end
 
 function Q.ForCharacter(quest,who)
     who=who or CD.Items.Character()
-    local faction=who.faction=="Horde" and 178 or 77
+    if quest.faction and quest.faction~=who.faction then return false end
+    local faction=CD.QuestCatalog.factionMasks and CD.QuestCatalog.factionMasks[who.faction]
+        or (who.faction=="Horde" and 178 or 77)
     if quest.races and quest.races>0 and not intersects(quest.races,faction) then return false end
     if not CD.Items.HasMask(quest.classes,who.classID) then return false end
     if who.raceID and not CD.Items.HasMask(quest.races,who.raceID) then return false end
     return true
 end
 
+function Q.Get(id)
+    local catalog,who=CD.QuestCatalog,CD.Items.Character()
+    local class=catalog.classes and catalog.classes[who.faction..":"..tostring(who.classID)]
+    if class and class[id] then return class[id] end
+    if who.faction=="Horde" and catalog.horde and catalog.horde[id] then return catalog.horde[id] end
+    return catalog.quests[id]
+end
+
 function Q.List(dungeon)
     local result={}
     local who=CD.Items.Character()
     for _,id in ipairs(dungeon.quests or {}) do
-        local quest=CD.QuestCatalog.quests[id]
+        local quest=Q.Get(id)
         if quest and Q.ForCharacter(quest,who) then result[#result+1]=quest end
     end
     return result
@@ -39,10 +49,15 @@ function Q.InLog(id)
         local index=CD.Number(call(api,id))
         if index and index>0 then return true end
     end
-    local count=CD.Number(call(GetNumQuestLogEntries)) or 0
+    local count=CD.Number(call(C_QuestLog and C_QuestLog.GetNumQuestLogEntries or GetNumQuestLogEntries)) or 0
     for i=1,count do
-        local _,_,_,_,header,_,_,questId=call(GetQuestLogTitle,i)
-        if not header and questId==id then return true end
+        local info=CD.Table(call(C_QuestLog and C_QuestLog.GetInfo,i))
+        if info then
+            if CD.Bool(info.isHeader)~=true and CD.Number(info.questID)==id then return true end
+        else
+            local _,_,_,_,header,_,_,questId=call(GetQuestLogTitle,i)
+            if CD.Bool(header)~=true and CD.Number(questId)==id then return true end
+        end
     end
     return false
 end
@@ -58,7 +73,7 @@ function Q.State(quest)
     end
     local any,done=false,false
     for _,id in ipairs(quest.previousAny or {}) do
-        local prior=CD.QuestCatalog.quests[id]
+        local prior=Q.Get(id)
         if not prior or Q.ForCharacter(prior,who) then any=true;done=done or Q.Completed(id) end
     end
     if any and not done then return "Prerequisites incomplete","amber" end
@@ -100,6 +115,11 @@ function Q.GiverLines(quest)
 end
 
 function Q.LocationText(loc)
+    if loc.map then
+        local info=CD.Table(call(C_Map and C_Map.GetMapInfo,loc.map))
+        local name=info and CD.Text(info.name) or CD.QuestCatalog.mapNames[loc.map] or "Map #"..loc.map
+        return name..(loc.x and loc.y and string.format(" (%.1f, %.1f)",loc.x,loc.y) or " (coordinates not recorded)")
+    end
     return Q.ZoneName(loc.zone)..(loc.x and loc.y and string.format(" (%.1f, %.1f)",loc.x,loc.y)
         or " (coordinates not recorded)")
 end
@@ -114,7 +134,7 @@ function Q.Prerequisites(quest)
         for _,group in ipairs(groups) do
             local valid={}
             for _,id in ipairs(group[1] or {}) do
-                local prior=CD.QuestCatalog.quests[id]
+                local prior=Q.Get(id)
                 if prior and Q.ForCharacter(prior) then valid[#valid+1]=prior end
             end
             for _,prior in ipairs(valid) do
@@ -122,7 +142,7 @@ function Q.Prerequisites(quest)
                 visit(prior,depth+1,group[2])
             end
         end
-        local parent=CD.QuestCatalog.quests[current.activeParent or 0]
+        local parent=Q.Get(current.activeParent or 0)
         if parent and Q.ForCharacter(parent) then
             result[#result+1]={quest=parent,depth=depth,relation="Must be active"}
             visit(parent,depth+1,"Must be active")

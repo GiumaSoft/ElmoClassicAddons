@@ -1,6 +1,6 @@
 # ElmoDungeonLoot 2.2.0
 
-A standalone **Classic Era** dungeon journal with a dark leather, bronze and gold
+A standalone **Classic Era and Forever** dungeon journal with a dark leather, bronze and gold
 interface inspired by the installed TalentsClassic planner. All interface text is English.
 
 Open with `/cdungeon`, `/classicdungeon` or `/cdl`. `/cdungeon reset` centers the window.
@@ -113,3 +113,9 @@ are in `SOURCES.md` and `ATTRIBUTION.md`.
 ## Elmo migration
 
 Settings are imported from ClassicDungeon. Legacy settings import remains supported when previous data is available. Restart WoW after installing the new folder. Release version is unchanged.
+
+## Client packages
+
+Choose the `classic` package for Interface 11509 or `forever` for Interface 16001. Both are built from the same source project; the release version is unchanged. Install only the package for your client. Automated checks simulate the APIs; loading and rendering in the actual Forever client still need verification.
+
+The Forever package bundles its own 35-dungeon catalogue, including Hall of Thanes, with 1,434 recorded drops and 636 quests including prerequisites. Era keeps its original 26-dungeon catalogue. Quest givers and chains use faction/class-specific Forever records and the modern quest log. Native item data/tooltip values replace bundled stats once loaded. The snapshot contains incomplete or datamined tables; an empty encounter is explicitly marked, and unknown minimum entry levels or coordinates are not invented. Snapshot provenance is in SOURCES.md.

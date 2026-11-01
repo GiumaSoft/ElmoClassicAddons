@@ -3,7 +3,7 @@ import os
 from lupa.lua51 import LuaRuntime
 
 ROOT = Path(__file__).resolve().parents[3]
-ADDON = Path(__file__).resolve().parents[3] / "ElmoPlater"
+ADDON = Path(os.environ.get('ELMO_TEST_ADDON', ROOT / "ElmoPlater"))
 vm = LuaRuntime(unpack_returned_tuples=True)
 vm.execute((Path(__file__).parent/'wow_mock.lua').read_text())
 vm.execute('''
@@ -44,6 +44,14 @@ function MOCK.mob(...)
 end
 ''')
 ns=vm.table();load=vm.eval('function(s,n,ns) assert(loadstring(s,"@"..n))("ElmoPlater",ns)end')
+if os.environ.get('ELMO_TEST_FOREVER'):
+    vm.execute('''
+    local getter=CombatLogGetCurrentEventInfo
+    C_CombatLog={IsCombatLogRestricted=function()return MOCK.logRestricted==true end,
+        GetCurrentEventInfo=getter}
+    CombatLogGetCurrentEventInfo=nil
+    C_EventUtils={IsEventValid=function(event)return not MOCK.invalidEvents or not MOCK.invalidEvents[event] end}
+    ''')
 for name in ['Migration.lua','Core.lua','Plates.lua']:load((ADDON/name).read_text(),name,ns)
 vm.globals().A=ns
 vm.execute('''
