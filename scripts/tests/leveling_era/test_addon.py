@@ -534,7 +534,7 @@ class LevelingTests(unittest.TestCase):
             if frame.name == 'ElmoLevelingPanel' then panels = panels + 1 end
             assert(frame.name ~= 'ClassicXPTrackerPanel')
         end
-        assert(panels == 1 and A.version == '1.6.3' and A.UI.panel.height == 195 and A.UI.panel.width == 332)""")
+        assert(panels == 1 and A.version == '1.6.4' and A.UI.panel.height == 195 and A.UI.panel.width == 332)""")
 
     def test_mob_kill_records_actual_xp_levels_and_one_kill(self):
         self.check("""MOCK.level = 20; MOCK.mob('target','Boar',19); MOCK.start()

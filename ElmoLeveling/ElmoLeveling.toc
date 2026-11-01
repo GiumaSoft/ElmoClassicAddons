@@ -2,7 +2,7 @@
 ## Title: ElmoLeveling
 ## Notes: Track XP, bag value, kills and usable equipment upgrades in WoW Forever.
 ## Author: Giuseppe
-## Version: 1.6.3
+## Version: 1.6.4
 ## SavedVariablesPerCharacter: ElmoLevelingDB
 ## OptionalDeps: BetterBags
 

@@ -1,26 +1,54 @@
-# Source and validation
+# Sources and validation
 
-Priority is lexicographic: health below 20%, missing personal debuff,
-then lowest remaining absolute HP. The selected target participates in the same ordering and can receive the doubled height. Simulated
-checks include different maximum health values to distinguish HP from percentage,
-and verify that the enlarged rectangle follows the new tie-breaker.
+The editor's condition-type/operator/value rows, AND/OR and grouping concepts
+were reviewed against [TellMeWhen's condition editor](https://github.com/ascott18/TellMeWhen/blob/master/Components/Core/Conditions/Config.lua)
+and [condition metadata specification](https://github.com/ascott18/TellMeWhen/blob/master/Documentation/Conditions/ConditionDataSpecification.txt).
+No TellMeWhen runtime or assets are copied. ElmoPlater evaluates validated data
+with a small boolean evaluator; saved settings are never compiled as Lua.
+Ordered first-match rules are separate from the conditions inside each rule.
 
-Client: WoW Classic Era 1.15.9 / Interface 11509.
-Primary UI snapshot: https://github.com/Gethe/wow-ui-source/tree/4192ac60067fc55566182291bc67c85dd9b6794d/Interface/AddOns
+Primary Classic Era UI/API snapshot, Interface 11509:
+https://github.com/Gethe/wow-ui-source/tree/4192ac60067fc55566182291bc67c85dd9b6794d/Interface/AddOns
 
-The native NamePlateBase owns a pooled UnitFrame with HealthBarsContainer.healthBar. An addon-owned UIParent bounds frame follows that existing health region. Only this owned frame is measured to extend the first eligible attacked rectangle upward to twice its normal height. Global native nameplate dimensions and stacking bounds are not changed. One-time migration restores the prior build's saved global size/inset overrides outside combat.
+Primary Forever UI/API snapshot, Interface 16001:
+https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns
 
-Installed Plater.lua (around lines 3778-3788 and 9129-9136) binds an owned hitTestFrame using guarded native hit-test APIs and later resizes that frame. ElmoPlater uses the same principle: SetHitTestPoints anchors to the owned rectangle, guarded by CanChangeHitTestPoints. The published FrameAPINamePlateDocumentation describes combat restrictions and the unit-assignment-tick exception. Binding is deferred when disallowed; changing the already bound owned rectangle updates its referenced region. Cleanup reconstructs Blizzard's normal hit points from NamePlateUnitFrameMixin:ApplyFrameOptions instead of calling the restricted GetHitTestPoints getter. Native containing bounds and overlap handling remain engine-controlled.
+The native pooled UnitFrame owns HealthBarsContainer.healthBar. Addon-owned
+UIParent bounds follow that region. Only owned bounds are measured. Artwork
+normalizes effective scale and frame level. The chosen engaged mob's rectangle
+grows upward to twice its usual height. Global dimensions/stacking are unchanged.
 
-API source: https://github.com/Gethe/wow-ui-source/blob/4192ac60067fc55566182291bc67c85dd9b6794d/Interface/AddOns/Blizzard_APIDocumentationGenerated/FrameAPINamePlateDocumentation.lua
-Plater source: https://github.com/Tercioo/Plater-Nameplates/blob/master/Plater.lua
+[Plater](https://github.com/Tercioo/Plater-Nameplates/blob/master/Plater.lua)
+demonstrates owned hit-test frames and guarded native bindings. ElmoPlater binds
+SetHitTestPoints only when CanChangeHitTestPoints permits it, then changes its
+owned reference frame. Cleanup reconstructs Blizzard's published anchors without
+calling the restricted getter. Native containing bounds and click overlap remain
+engine-controlled. Personal debuff icons are above the bar, outside the click
+rectangle. The separate priority anchor has been removed.
 
-Personal auras use C_UnitAuras.GetAuraDataByIndex(..., "HARMFUL|PLAYER") with an additional player-only source check and a legacy UnitDebuff fallback. The combat log tracks player-sourced damage, misses and harmful debuffs by destination GUID, and clears tracked mobs on death or combat end. GUIDs are used for tracking only. Unit health and faction events update rectangles; aura events rescan only the affected unit. A 0.1-second timer handles expiry and graphical ranking. Solid WHITE8X8 replaces the shaded status-bar texture.
+C_UnitAuras.GetAuraDataByIndex uses HARMFUL|PLAYER plus a player-source check,
+with UnitDebuff fallback. Aura scans and public combat logs populate a per-character
+observed-debuff catalog. Damage, misses and personal harmful auras mark engaged
+mobs. GUIDs identify records only. The 0.1-second tick updates priority and expiry;
+aura events scan the changed unit. Debuff rules require public usability/resource and
+cooldown data. GetSpellCooldownDuration(..., true) ignores GCD; the numeric fallback
+compares the spell cooldown with spell 61304's GCD. Charges are checked separately.
+Unknown data fails closed rather than fabricating a usable spell or missing aura.
 
-The installed Plater demonstrates UIParent-based artwork, effective-scale normalization and frame-level ordering. No Plater source/assets are copied or modified.
+`scripts/tests/ElmoPlater/test_rules.py` exercises A/B/C multi-debuff decisions,
+explicit order including AoE, explicit lowest-health rules, resources, own CD,
+GCD/charges, refresh/count limits, AND/OR/grouping, restricted values, editor
+save/cancel, dropdown paging, adding multiple independent rules, duplication,
+ordering and legacy migration. Spellbook options use capability-checked modern
+C_SpellBook readers or Classic spell-tab readers; tests cover both paths. `test_prototype.py` checks geometry isolation,
+attacked-only enlargement, native containment, debuff rows above the bar,
+expiry, colours, and restoration. Both use Lua 5.1 fixtures, not the
+native engine. `scripts/tests/test_forever.py` adds modern/restricted API checks.
+Live graphical rendering and overlap targeting have not been certified by mocks.
 
-Validation: tools/classicplater/test_prototype.py executes the two runtime files in Lua 5.1 against native-frame, combat-log and aura fixtures. It checks unchanged global dimensions/insets, guarded click binding, targeting through the added upper half in combat, deferred writes on blocked ticks, selected-target participation, health strictly below 20% before missing debuffs, the exact 20% boundary, attacked-only enlargement, combat cleanup, solid fill, aura ownership/ranks/expiry, reaction colours and pooled-frame restoration. The modeled containing native rectangle is larger than its health bar, and click tests retain native clipping. Mocks do not verify live rendering or actual C++ hit-test and overlapping click behavior.
-
-## Forever API verification
-
-Interface 16001 uses the shared runtime. Compared with the [Blizzard Forever UI/API source](https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns), revision `ca8368f2f2380cbe696854f7f2646387c278a61b`: nameplate unit-frame health anchors and guarded hit-test methods, `C_Spell` cooldown/charge duration objects, aura readers, restricted combat-log detection and `C_QuestLog` readers. Capability checks and secret-value guards preserve client restrictions. Tests in `scripts/tests/test_forever.py` are offline simulations and do not certify live C++ rendering or native click overlap.
+`scripts/tests/ElmoPlater/test_dynamic_health.py` verifies schema-v1 migration
+without duplicating rules, editable strict percentage thresholds, health/debuff
+reordering, disabled/deleted rules, no hidden HP fallback, absolute-HP selection
+restricted to attacked mobs, health rules without spell/resource dependencies,
+additional conditions, unknown data and manager controls. The normal secondary
+layering uses GUID only; all health priority comes from the ordered rule list.

@@ -2,11 +2,17 @@
 ## Title: ElmoPlater
 ## Notes: Native-position nameplates with personal debuffs, health percentage and visual priority.
 ## Author: Giuseppe
-## Version: 2.0.7
+## Version: 2.2.0
 ## SavedVariablesPerCharacter: ElmoPlaterDB
 ## OptionalDeps: ClassicTarget
 
 Migration.lua
 Core.lua
+Spells.lua
+Conditions.lua
+Rules.lua
 Plates.lua
+Settings.lua
+Dropdown.lua
+ConditionEditor.lua
 

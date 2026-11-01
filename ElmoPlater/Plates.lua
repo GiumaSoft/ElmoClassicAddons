@@ -101,7 +101,7 @@ function A.Add(unit)
         record.bounds:ClearAllPoints(); record.bounds:SetAllPoints(health)
         record.frame:ClearAllPoints(); record.frame:SetAllPoints(record.bounds)
     end
-    if record.guid ~= guid then record.auras = {} end
+    if record.guid ~= guid then record.auras, record.aurasKnown = {}, false end
     record.unit, record.guid = unit, guid; A.units[unit] = record
     native:SetAlpha(0)
     A.Update(true, unit)
@@ -127,6 +127,7 @@ local function scan(record)
         if A.Secret(data.sourceUnit) or A.Secret(data.spellId) then record.aurasKnown = false end
         if source and (source == "player" or A.Bool(A.Call(UnitIsUnit, source, "player")) == true) and
             (expires == 0 or expires > GetTime()) then
+            A.Rules.Observe(data.spellId, data.name, data.icon)
             auras[#auras + 1] = {name = A.Text(data.name), id = A.Number(data.spellId), icon = A.Number(data.icon),
                 expires = expires, count = A.Number(data.applications) or 0}
         end
@@ -152,24 +153,8 @@ local function icon(record, index)
     return f
 end
 
-function A.Missing(record)
-    if record.aurasKnown == false or A.Bool(A.Call(UnitCanAttack, "player", record.unit)) ~= true then return false end
-    local watch = A.db.watchDebuff
-    if watch == "" then return #record.auras == 0 end
-    local id = tonumber(watch)
-    local name = id and A.Text(A.Call(C_Spell and C_Spell.GetSpellName, id)) or watch
-    for _, aura in ipairs(record.auras) do
-        if (id and aura.id == id) or (type(name) == "string" and type(aura.name) == "string" and
-            aura.name:lower() == name:lower()) then return false end
-    end
-    return true
-end
-
+-- Secondary layering only. The chosen rule target is explicitly placed in front.
 function A.Better(a, b)
-    local aCritical, bCritical = a.fraction < .2, b.fraction < .2
-    if aCritical ~= bCritical then return aCritical end
-    if a.missing ~= b.missing then return a.missing end
-    if a.health ~= b.health then return a.health < b.health end
     return a.guid < b.guid
 end
 
@@ -250,7 +235,6 @@ local function render(record, now)
         child.count:SetText(aura.count > 1 and aura.count or ""); child:Show()
     end
     for i = count + 1, #f.icons do f.icons[i]:Hide() end
-    record.missing = A.Missing(record)
     f:Show(); return true
 end
 
@@ -263,14 +247,13 @@ function A.Update(refreshAuras, changedUnit)
         if render(record, now) then list[#list + 1] = record end
     end
     table.sort(list, A.Better)
-    local firstPriority = true
+    A.priorityTarget = A.Rules.Choose(list, now)
     for rank, record in ipairs(list) do
         local level = 30 + (#list - rank) * 8
-        record.frame:SetFrameLevel(level)
-        record.frame.bar:SetFrameLevel(level + 1)
+        local priority = record == A.priorityTarget
+        if priority then level = 30 + #list * 8 end
+        record.frame:SetFrameLevel(level); record.frame.bar:SetFrameLevel(level + 1)
         for _, child in ipairs(record.frame.icons) do child:SetFrameLevel(level + 2) end
-        local priority = firstPriority and A.attacked[record.guid] == true and
-            A.Bool(A.Call(UnitCanAttack, "player", record.unit)) == true
         record.priority = priority
         -- Measure only our UIParent-based bounds. Bound click points follow this owned rectangle.
         local height = A.Number(A.Call(record.bounds.GetHeight, record.bounds)) or 0
@@ -289,6 +272,6 @@ function A.Update(refreshAuras, changedUnit)
         local shade = record.borderShade
         record.frame:SetBackdropBorderColor(shade, shade, shade, 1)
         bindClicks(record)
-        if priority then firstPriority = false end
     end
+    if A.Settings then A.Settings.Tick(now) end
 end

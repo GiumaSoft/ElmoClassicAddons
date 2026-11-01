@@ -1,4 +1,4 @@
-# ElmoLeveling 1.6.3
+# ElmoLeveling 1.6.4
 
 An English leveling dashboard for **WoW Classic Era 1.15.9 (11509)** and **WoW Forever 1.60.1 (16001)**. Both packages use the same source files; the build generates only the client selector and manifest. API capability checks handle talents, tooltips, spells and protected combat data.
 

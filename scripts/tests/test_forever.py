@@ -1,5 +1,6 @@
 """Dual-client package checks plus modern/restricted API regressions. No live input."""
 import os
+import sys
 from pathlib import Path
 import runpy
 import unittest
@@ -32,7 +33,7 @@ def load_dungeon():
 class ForeverTests(unittest.TestCase):
     def test_all_packages_and_versions(self):
         for client,interface in [('classic',11509),('forever',16001)]:
-            for name,version in [('ElmoLeveling','1.6.3'),('ElmoPlater','2.0.7'),('ElmoDungeonLoot','2.2.0'),('ElmoSpellTracker','1.0.2')]:
+            for name,version in [('ElmoLeveling','1.6.4'),('ElmoPlater','2.2.0'),('ElmoDungeonLoot','2.2.0'),('ElmoSpellTracker','1.0.2')]:
                 path=ROOT/'.build'/client/name
                 toc=(path/(name+'.toc')).read_text()
                 self.assertIn('## Interface: '+str(interface),toc)
@@ -108,6 +109,7 @@ class ForeverTests(unittest.TestCase):
         ''')
 
     def test_forever_nameplates_and_restricted_fallback(self):
+        sys.path.insert(0,str(HERE/'ElmoPlater'))
         with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
             state=runpy.run_path(str(HERE/'ElmoPlater/test_prototype.py'))
         vm=state['vm']

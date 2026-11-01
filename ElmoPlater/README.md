@@ -1,40 +1,101 @@
-# ElmoPlater 2.0.7 prototype
+# ElmoPlater 2.2.0
 
-A shared Classic Era / Forever nameplate prototype, with native positioning and native clicks.
+Classic Era / Forever nameplates with solid reaction colours, contrasting borders,
+health percentage, difficulty-coloured levels and all your active harmful debuffs.
+Other players' and pet debuffs are excluded. Claimed mobs are grey and marked
+`[CLAIMED]`. Native positioning and targeting remain owned by WoW.
 
-- Solid-colour rectangular health bar without a gradient, health percentage, name and level.
-- Red hostile or attackable neutral in combat, yellow attackable neutral out of combat, green non-attackable friendly; grey and CLAIMED for a denied tap. Red bars have white borders.
-- Contrasting borders: white on red bars, near-black on yellow, green and grey bars. Selected and priority mobs have a thicker border.
-- Your debuffs above each bar, including timers and stack counts. Other players and pets are excluded.
-- Level colours: grey/green follow the client's creature difficulty colour, yellow for -2 through +2 levels, orange for +3 through +5, red above +5. Skull-level mobs display red `Lv. ??`. These are difficulty indicators, not a calculation of the exact XP award.
-- Visual priority includes the selected target: health strictly below 20% comes first, then missing debuff, then lowest remaining HP (absolute hit points). Exactly 20% belongs to the non-critical group. Unavailable HP sorts after known HP within the same priority group; stable GUID breaks further ties.
-- Among mobs you attacked in the current combat, the first mob's rectangle is twice its normal height, growing upward, with a thicker contrasting border. The selected target receives the same enlargement when it ranks first. Selection does not override the priority order. Nearby mobs you have not attacked never receive this enlargement. Your damage, missed attacks and applied harmful debuffs qualify; other players' attacks do not. Tracking clears on death, leaving the world or combat ending.
-- Native hit-test points follow the custom rectangle, including its added upper half. Binding uses `CanChangeHitTestPoints()` and waits for an allowed tick; the bound rectangle then follows priority and size changes.
-- No separate icon bar, targeting by GUID, global native nameplate resizing, restricted geometry measurements or hooks.
+## Configuration
 
-The custom rectangle follows the existing native health-bar bounds. Only the first eligible rectangle grows upward to twice that height; its name, level and debuffs follow its new top edge. Native graphics are hidden while skinned and restored on removal. Native targeting uses hit-test points anchored to this rectangle; no Lua targeting action runs on click. When permitted, cleanup restores Blizzard's normal hit-test layout using the published UI anchors, without reading restricted native geometry. WoW retains its containing nameplate bounds and engine click priority; live verification is still required for overlapping bars and the enlarged upper half.
+Open `/eplater` (also `/elmoplater`, `/cplater`, `/classicplater`, `/ctarget`,
+`/classictarget`). Settings are saved per character.
 
-Renamed from ClassicTarget. Restart WoW after installing the new folder, then enable ElmoPlater. Existing ClassicTarget data-only helpers can supply older settings without running the previous interface. New settings use ElmoPlaterDB and existing settings are imported once. Existing v1 global overrides are recovered once, if needed. Enemy/friendly nameplate visibility follows the game's settings.
+1. In **New rule**, choose **Health below threshold**, **Lowest health (attacked mobs)**
+   or a learned missing debuff, then click **+ Add rule**. Repeat for more rules.
+   Debuffs appear after you apply them once; observing an aura never creates a rule.
+2. Select an entry in the left list. **Rule type** controls which fields appear.
+   The health threshold is editable (default 20%, strictly below). Dropdowns choose the debuff, cast ability,
+   enabled status, single-target/AoE application, refresh threshold, mob preference,
+   minimum mob counts and target health range. The cast menu also includes active
+   abilities from your spellbook. No numeric spell IDs need to be entered.
+3. Click **Save rule** to save that entry. **Duplicate** creates an independent
+   copy at the bottom. **Move up / Move down** changes precedence; **Remove** deletes
+   the selected rule. Long lists and long dropdown menus have Previous / Next pages.
+4. Rules work like firewall rules: the **first matching enabled rule wins**.
+   Put an AoE rule above a single-target rule to prefer it. The application label
+   never silently reorders the list.
+5. **Conditions…** adds any number of comparisons joined with AND / OR and
+   parentheses. AND takes precedence over OR. These are additional requirements
+   alongside the rule's limits. Only debuff rules require cooldown and resource checks. Another dropdown
+   selects the spell/debuff to compare, with **This rule** as the default.
 
-Commands:
+Conditions cover target HP/percentage, player health, mana/rage/energy, engaged
+mobs, mobs needing the rule's debuff, active configured debuffs, a personal debuff's
+presence/time/stacks, a spell's cooldown and combat status. **This rule** uses
+the selected rule; another selection checks that spell or debuff. Values are ordinary
+numbers; boolean comparisons use 1/0. Missing debuffs have zero remaining time
+and stacks. Unavailable/private values do not satisfy comparisons.
 
-```
-/cplater                 Status and help
-/cplater debuff Rend     Prioritize a missing named debuff within each health group
-/cplater debuff 772      Select a debuff by spell ID (same-name ranks count)
-/cplater debuff any      Default: no personal debuff active
-```
+Rule limits include minimum engaged mobs, minimum mobs missing or needing a
+refresh of this debuff, target health range and refresh threshold in seconds
+(0 = missing only). Unknown aura durations are never guessed. **Prefer mobs
+already covered** favours candidates with more other active, configured debuffs;
+remaining ties use lowest absolute HP. Turn it off for simple lowest-HP ties.
 
-Aliases: /classicplater, /ctarget and /classictarget.
+## Priority
 
-All settings and messages are English. This is a prototype: Lua 5.1 checks use simulated APIs; the redesign still needs a live reload and visual test.
+Only mobs you attacked during the current combat qualify for the marker,
+including your selected target. Nearby untouched mobs do not qualify.
 
-## Elmo migration
+Every priority is an ordinary enabled rule, evaluated from top to bottom:
 
-Settings are imported from ClassicPlater, ClassicTarget. Legacy settings import remains supported when previous data is available. Restart WoW after installing the new folder. Release version is unchanged.
+- **Health below threshold** chooses the lowest remaining absolute HP among mobs
+  strictly below the configured percentage (20% by default).
+- **Missing debuff** requires an actionable missing/refreshable debuff, a usable
+  learned cast ability, enough resources and no own cooldown. GCD is ignored.
+  Partial-coverage preference and lowest-HP ties follow the rule settings.
+- **Lowest health (attacked mobs)** chooses the lowest absolute remaining HP,
+  regardless of percentage, aura readability, resources or cooldowns.
 
-## Client packages
+All types respect the minimum engaged count, health range and additional
+conditions. The first match wins; later rules do not filter or override it.
+Stable GUID breaks final equal-HP ties. GUIDs are never used for targeting.
+There is no implicit critical-health gate or lowest-health fallback. With no
+matching enabled rule, no bar receives the priority enlargement. Other bars use
+stable GUID layering rather than a hidden health ordering.
 
-Choose the `classic` package for Interface 11509 or `forever` for Interface 16001. Both are built from the same source project; the release version is unchanged. Install only the package for your client. Automated checks simulate the APIs; loading and rendering in the actual Forever client still need verification.
+The migration inserts **Health <20%** before your existing debuff rules and
+**Lowest health** after them once. Move, disable, delete or duplicate either rule;
+deleted rules stay deleted across reloads. New rules append at the bottom, so
+move a general Lowest health rule below more specific rules to keep them reachable.
 
-Combat-log registration is capability-checked. If the log is restricted, visible personal harmful auras can still identify attacked mobs; damage-only attack history is unavailable. If unit identity or health is private, the addon leaves Blizzard artwork visible instead of hiding the health bar or fabricating priority. Restricted aura data is not treated as a missing debuff.
+Example order: Health <20%, Thunder Clap, Rend, Lowest health. If no mob meets
+the first rule, ready Thunder Clap can pick a mob missing it. If Thunder Clap is
+cooling down, Rend can prefer a partly covered mob. Move Rend above Health <20%
+if you want the Rend rule to win even when another mob is below 20%.
+
+The chosen rectangle is drawn in front and doubled in height, growing upward.
+Your debuff icons are placed **above** each bar, leaving 20 pixels for the name
+and level; additional rows extend upward. There is no separate priority anchor. The doubled bar
+is the native click target. WoW retains its containing nameplate bounds and its
+own overlap click priority.
+
+## Compatibility and validation
+
+Choose `classic` for Interface 11509 or `forever` for Interface 16001. Both packages
+share the runtime. After updating, reload the UI when safe. Existing settings are
+imported from ClassicPlater / ClassicTarget when available. A legacy named-debuff
+setting is imported as a debuff rule, with the two editable health rules added
+once by the v2 rule-schema migration.
+`/eplater debuff NAME_OR_ID` replaces the list with one rule; `debuff any` clears it.
+
+The addon does not resize global native nameplates, measure restricted regions,
+hook Plater, or target by GUID. Artwork and permitted native hit points are restored
+when a pooled nameplate is removed. If identity or health is private, Blizzard's
+artwork remains visible. Restricted aura data is not treated as a missing debuff.
+When combat logs are restricted, visible personal auras can identify engaged mobs;
+damage-only attack history is unavailable. Tracking clears on death/combat end.
+
+Lua 5.1 behavioral checks cover rules, resources/cooldowns, conditions, configuration
+save/cancel, dynamic health order/removal/migration, private-value handling and pooled frames. These are simulated API
+checks; actual rendering and native click/overlap behavior require an in-game test.

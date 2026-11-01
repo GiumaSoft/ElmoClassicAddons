@@ -1,7 +1,7 @@
 local addonName, A = ...
 ElmoPlater = A
 ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units, A.attacked = "2.0.7", {}, {}, {}
+A.version, A.records, A.units, A.attacked = "2.2.0", {}, {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -92,19 +92,33 @@ function A.CombatLog(...)
     elseif source and source == A.Text(A.Call(UnitGUID,"player")) then
         local damage = event:match("_DAMAGE$") or event:match("_MISSED$") or event == "DAMAGE_SHIELD"
         local debuff = (event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH") and A.Text(select(15, ...)) == "DEBUFF"
+        if debuff then
+            local id, name = A.Number(select(12, ...)), A.Text(select(13, ...))
+            local info = id and A.Spells.Info(id)
+            A.Rules.Observe(id, name, info and info.icon)
+        end
         if damage or debuff then A.attacked[dest] = true; A.Update(false) end
     end
 end
 
 function A.Command(msg)
     local command, value = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
-    if command:lower() == "debuff" then
-        A.db.watchDebuff = value:lower() == "any" and "" or value
-        A.Print(A.db.watchDebuff == "" and "Missing-debuff priority: no personal debuff." or
-            "Missing-debuff priority: " .. A.db.watchDebuff .. ".")
+    command = command:lower()
+    if command == "" or command == "config" or command == "settings" then
+        A.Settings.Toggle()
+    elseif command == "debuff" then
+        if value:lower() == "any" then
+            A.db.rules, A.db.watchDebuff = {}, ""
+            A.Print("Rules cleared. No priority highlight until you add a rule.")
+        else
+            local info = A.Spells.Info(tonumber(value) or value)
+            if not info or not info.id then A.Print("Unknown spell. Open /eplater and add a spell ID."); return end
+            A.db.rules, A.db.watchDebuff = {}, value
+            A.Rules.Add(info.id)
+            A.Print("Single priority rule: " .. info.name .. ".")
+        end
     else
-        A.Print("v" .. A.version .. " prototype. All mobs: health < 20%, missing debuff, then lowest remaining HP. " ..
-            "The first mob you attacked has double height, including your selected target. /ctarget debuff Rend; /ctarget debuff any.")
+        A.Print("/eplater: Rules Manager. First matching enabled rule wins. Health and debuff rules share the same ordered list; only engaged mobs qualify.")
     end
     A.Update(true)
 end
@@ -119,6 +133,7 @@ function A.Initialize()
     A.db = ElmoPlaterDB
     A.db.watchDebuff = type(A.db.watchDebuff) == "string" and A.db.watchDebuff or ""
     A.db.plateAuraSize = math.max(14, math.min(36, A.Number(A.db.plateAuraSize) or 22))
+    A.Rules.Initialize()
     A.ready = A.Recover()
     if not A.ready then return end
     A.RegisterCombatLog()
@@ -128,7 +143,7 @@ function A.Initialize()
     SLASH_ELMOPLATER1="/elmoplater"; SLASH_ELMOPLATER2="/eplater"
     SlashCmdList.ELMOPLATER=A.Command
     A.Scan()
-    A.Print("Loaded " .. A.version .. " prototype: priority: health < 20%, missing debuff, then lowest remaining HP.")
+    A.Print("Loaded " .. A.version .. ". /eplater: learned debuffs and ordered priority rules.")
 end
 
 local elapsed = 0

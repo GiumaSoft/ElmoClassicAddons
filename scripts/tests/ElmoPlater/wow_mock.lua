@@ -26,7 +26,7 @@ local fractions = {TOPLEFT = {0,1}, TOP = {.5,1}, TOPRIGHT = {1,1}, LEFT = {0,.5
     CENTER = {.5,.5}, RIGHT = {1,.5}, BOTTOMLEFT = {0,0}, BOTTOM = {.5,0}, BOTTOMRIGHT = {1,0}}
 local function noop() end
 for _, name in ipairs({'SetClampedToScreen', 'SetMovable', 'RegisterForClicks', 'RegisterForDrag',
-    'SetAutoFocus', 'SetNumeric', 'SetMaxLetters', 'SetJustifyH', 'SetJustifyV', 'SetFont'}) do methods[name] = noop end
+    'SetAutoFocus', 'SetNumeric', 'SetMaxLetters', 'SetJustifyH', 'SetJustifyV', 'SetTextInsets', 'SetFont'}) do methods[name] = noop end
 function methods:SetBackdrop(v) self.backdrop = v end
 function methods:SetFont(path,size,flags) self.font,self.fontSize,self.fontFlags=path,size,flags end
 function methods:SetAlpha(value) mutation(self); self.alpha=value end
@@ -106,7 +106,12 @@ function methods:Hide() self.shown=false end
 function methods:SetShown(v) self.shown=v end
 function methods:IsShown() return self.shown end
 function methods:IsVisible() return self.shown and (not self.parent or self.parent:IsVisible()) end
-function methods:SetText(v) self.text=tostring(v or '') end
+function methods:SetText(v)
+    self.text=tostring(v or '')
+    if self.scripts.OnTextChanged then self.scripts.OnTextChanged(self,false) end
+end
+function methods:SetChecked(v) self.checked=v==true end
+function methods:GetChecked() return self.checked==true end
 function methods:GetText() return self.text or '' end
 function methods:SetTextColor(...) self.color={...} end
 function methods:SetColorTexture(...) self.color={...} end
