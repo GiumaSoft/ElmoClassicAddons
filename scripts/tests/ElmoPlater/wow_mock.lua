@@ -30,6 +30,7 @@ for _, name in ipairs({'SetClampedToScreen', 'SetMovable', 'RegisterForClicks', 
 function methods:SetBackdrop(v) self.backdrop = v end
 function methods:SetFont(path,size,flags) self.font,self.fontSize,self.fontFlags=path,size,flags end
 function methods:SetWordWrap(value) self.wordWrap=value end
+function methods:GetStringWidth() return #(self.text or '')*(self.fontSize or 10)*.6 end
 function methods:SetAlpha(value) mutation(self); self.alpha=value end
 function methods:GetEffectiveAlpha()
     return (self.alpha or 1)*(self.parent and self.parent:GetEffectiveAlpha() or 1)

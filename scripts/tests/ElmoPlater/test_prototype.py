@@ -1,7 +1,7 @@
 from fixture import create_vm
 vm,ns=create_vm()
 vm.execute(r"""
-MOCK.start();assert(A.ready and A.version=='2.2.1')
+MOCK.start();assert(A.ready and A.version=='2.2.2')
 local a,pa=MOCK.mob('nameplate1','Creature-a','Murloc Streamrunner')
 local b,pb=MOCK.mob('nameplate2','Creature-b','Boar');pb.centerX=950
 assert(A.units.nameplate1 and pa.UnitFrame.alpha==0)
@@ -26,7 +26,8 @@ local function marked(unit)
   assert(not record.frame.mouse and not record.frame.bar.mouse)
   local nx,ny,nw,nh=MOCK.worldRect(record.frame.name)
   local lx,ly,lw,lh=MOCK.worldRect(record.frame.level)
-  assert(nx>=x and nx+nw+6<=lx,'Name and level overlap')
+  assert(nx+nw+6<=lx,'Name and level overlap')
+  assert(math.abs((nx+lx+lw)/2-(x+w/2))<.01,'Name and level group is not centered')
   assert(ny>=y+h and ly>=y+h and ny+nh<=y+h+20 and ly+lh<=y+h+20,'Header overlaps bar or debuffs')
   assert(record.frame.name.wordWrap==false and record.frame.level.wordWrap==false)
   for i=1,#record.auras do
@@ -41,6 +42,7 @@ a.name='Murloc Streamrunner with a very long name';MOCK.event('UNIT_HEALTH','nam
 local nameX,_,nameWidth=MOCK.worldRect(ra.frame.name)
 local barX,_,barWidth=MOCK.worldRect(ra.frame)
 assert(nameX+nameWidth>barX+barWidth and ra.frame.name:GetText()==a.name)
+assert(nameX<barX,'Long header must be able to extend on both sides of the bar')
 marked(nil)
 MOCK.hit('nameplate1','Player-other');marked(nil)
 MOCK.hit('nameplate1');marked('nameplate1')

@@ -19,9 +19,11 @@ local function make(plate)
     f.bar:SetPoint("TOPLEFT", 1, -1); f.bar:SetPoint("BOTTOMRIGHT", -1, 1)
     f.bar:SetStatusBarTexture(WHITE)
     f.percent = text(f.bar, 12); f.percent:SetPoint("CENTER")
-    f.name = text(f, 10); f.name:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 3)
+    f.header = CreateFrame("Frame", nil, f); f.header:EnableMouse(false)
+    f.header:SetPoint("BOTTOM", f, "TOP", 0, 3); f.header:SetHeight(14)
+    f.name = text(f.header, 10); f.name:SetPoint("LEFT", f.header, "LEFT", 0, 0)
     f.name:SetHeight(14); f.name:SetJustifyH("LEFT"); f.name:SetWordWrap(false)
-    f.level = text(f, 10); f.level:SetPoint("BOTTOMLEFT", f.name, "BOTTOMRIGHT", 6, 0)
+    f.level = text(f.header, 10); f.level:SetPoint("LEFT", f.name, "RIGHT", 6, 0)
     f.level:SetHeight(14); f.level:SetJustifyH("LEFT"); f.level:SetWordWrap(false)
     f.icons = {}; f:Hide()
     return {plate = plate, bounds = bounds, frame = f, auras = {}}
@@ -221,6 +223,10 @@ local function render(record, now)
     local level = A.Number(UnitLevel(unit))
     f.level:SetText(level == -1 and "Lv. ??" or (level and level > 0 and "Lv. " .. level or "Lv. ?"))
     f.level:SetTextColor(A.LevelColor(level))
+    -- Measure only our own text; center the complete name/level group, not the bar width.
+    local nameWidth = A.Number(A.Call(f.name.GetStringWidth, f.name)) or 0
+    local levelWidth = A.Number(A.Call(f.level.GetStringWidth, f.level)) or 0
+    f.header:SetWidth(nameWidth + 6 + levelWidth)
     record.selected = A.Text(A.Call(UnitGUID, "target")) == record.guid
     for i = #record.auras, 1, -1 do
         if record.auras[i].expires > 0 and record.auras[i].expires <= now then table.remove(record.auras, i) end
@@ -255,6 +261,7 @@ function A.Update(refreshAuras, changedUnit)
         local priority = record == A.priorityTarget
         if priority then level = 30 + #list * 8 end
         record.frame:SetFrameLevel(level); record.frame.bar:SetFrameLevel(level + 1)
+        record.frame.header:SetFrameLevel(level + 2)
         for _, child in ipairs(record.frame.icons) do child:SetFrameLevel(level + 2) end
         record.priority = priority
         -- Measure only our UIParent-based bounds. Bound click points follow this owned rectangle.
