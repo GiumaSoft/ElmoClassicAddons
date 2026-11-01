@@ -1,0 +1,13 @@
+## Interface: 11509
+## OptionalDeps: ClassicCooldownTracker
+## Title: ElmoSpellTracker
+## Notes: Track used abilities, cooldowns and insufficient mana, energy or rage in a compact bar.
+## Author: Giuseppe
+## Version: 1.0.2
+## SavedVariablesPerCharacter: ElmoSpellTrackerDB
+
+Migration.lua
+Bootstrap.lua
+Spells.lua
+UI.lua
+Core.lua

@@ -1,0 +1,3 @@
+-- Data-only helper for ClassicLevelingForever.
+-- The client loads this folder's previous per-character SavedVariables.
+-- The tracker imports ForeverLevelingTrackerDB; ForeverLevelingDB remains untouched.

@@ -1,0 +1,2 @@
+-- Data-only bridge for ClassicLeveling. WoW loads ClassicXPTrackerDB from this
+-- folder's per-character SavedVariables file. No frames, timers or commands.

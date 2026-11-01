@@ -1,0 +1,9 @@
+## Interface: 11509
+## Title: ClassicLeveling - Legacy XP import
+## Notes: Data-only importer for ClassicXPTracker profiles. The combined panel is provided by ClassicLeveling.
+## Author: Giuseppe
+## Version: 1.0.0
+## LoadOnDemand: 1
+## SavedVariablesPerCharacter: ClassicXPTrackerDB
+
+Legacy.lua
