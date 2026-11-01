@@ -1,4 +1,4 @@
-# ElmoPlater 2.2.0
+# ElmoPlater 2.2.1
 
 Classic Era / Forever nameplates with solid reaction colours, contrasting borders,
 health percentage, difficulty-coloured levels and all your active harmful debuffs.
@@ -75,6 +75,8 @@ cooling down, Rend can prefer a partly covered mob. Move Rend above Health <20%
 if you want the Rend rule to win even when another mob is below 20%.
 
 The chosen rectangle is drawn in front and doubled in height, growing upward.
+Names keep their natural single-line width, extending beyond the bar when needed;
+the level follows the full name with a 6-pixel gap.
 Your debuff icons are placed **above** each bar, leaving 20 pixels for the name
 and level; additional rows extend upward. There is no separate priority anchor. The doubled bar
 is the native click target. WoW retains its containing nameplate bounds and its

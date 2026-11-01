@@ -1,7 +1,7 @@
 local addonName, A = ...
 ElmoPlater = A
 ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units, A.attacked = "2.2.0", {}, {}, {}
+A.version, A.records, A.units, A.attacked = "2.2.1", {}, {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 

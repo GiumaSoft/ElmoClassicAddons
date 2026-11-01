@@ -29,6 +29,7 @@ for _, name in ipairs({'SetClampedToScreen', 'SetMovable', 'RegisterForClicks', 
     'SetAutoFocus', 'SetNumeric', 'SetMaxLetters', 'SetJustifyH', 'SetJustifyV', 'SetTextInsets', 'SetFont'}) do methods[name] = noop end
 function methods:SetBackdrop(v) self.backdrop = v end
 function methods:SetFont(path,size,flags) self.font,self.fontSize,self.fontFlags=path,size,flags end
+function methods:SetWordWrap(value) self.wordWrap=value end
 function methods:SetAlpha(value) mutation(self); self.alpha=value end
 function methods:GetEffectiveAlpha()
     return (self.alpha or 1)*(self.parent and self.parent:GetEffectiveAlpha() or 1)
@@ -74,7 +75,8 @@ local function rect(frame, visiting)
         local own,rel = assert(fractions[p[1]]),assert(fractions[p[3]])
         equations[#equations+1] = {own[1],own[2],rx+rw*rel[1]+p[4],ry+rh*rel[2]+p[5]}
     end
-    local x,y,w,h = 0,0,frame.width or 0,frame.height or 0
+    local naturalWidth=frame.kind=='FontString' and #(frame.text or '')*(frame.fontSize or 10)*.6 or 0
+    local x,y,w,h = 0,0,frame.width or naturalWidth,frame.height or 0
     if #equations > 0 then
         local a = equations[1]
         for i=2,#equations do

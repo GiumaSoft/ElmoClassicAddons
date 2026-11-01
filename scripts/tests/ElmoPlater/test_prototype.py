@@ -1,8 +1,8 @@
 from fixture import create_vm
 vm,ns=create_vm()
 vm.execute(r"""
-MOCK.start();assert(A.ready and A.version=='2.2.0')
-local a,pa=MOCK.mob('nameplate1','Creature-a','Wolf')
+MOCK.start();assert(A.ready and A.version=='2.2.1')
+local a,pa=MOCK.mob('nameplate1','Creature-a','Murloc Streamrunner')
 local b,pb=MOCK.mob('nameplate2','Creature-b','Boar');pb.centerX=950
 assert(A.units.nameplate1 and pa.UnitFrame.alpha==0)
 local ra,rb=A.units.nameplate1,A.units.nameplate2
@@ -24,12 +24,23 @@ local function marked(unit)
   local bx,by,bw,bh=MOCK.worldRect(record.bounds)
   assert(x==bx and y==by and w==bw and h==bh*(priority and 2 or 1),'Invalid rectangle: '..token)
   assert(not record.frame.mouse and not record.frame.bar.mouse)
+  local nx,ny,nw,nh=MOCK.worldRect(record.frame.name)
+  local lx,ly,lw,lh=MOCK.worldRect(record.frame.level)
+  assert(nx>=x and nx+nw+6<=lx,'Name and level overlap')
+  assert(ny>=y+h and ly>=y+h and ny+nh<=y+h+20 and ly+lh<=y+h+20,'Header overlaps bar or debuffs')
+  assert(record.frame.name.wordWrap==false and record.frame.level.wordWrap==false)
   for i=1,#record.auras do
    local _,debuffBottom,_,debuffHeight=MOCK.worldRect(record.frame.icons[i])
    assert(debuffBottom>=y+h+20,'Debuff overlaps bar or name/level header')
   end
  end
 end
+marked(nil)
+-- Long names may extend beyond the health rectangle; the level follows the full name.
+a.name='Murloc Streamrunner with a very long name';MOCK.event('UNIT_HEALTH','nameplate1')
+local nameX,_,nameWidth=MOCK.worldRect(ra.frame.name)
+local barX,_,barWidth=MOCK.worldRect(ra.frame)
+assert(nameX+nameWidth>barX+barWidth and ra.frame.name:GetText()==a.name)
 marked(nil)
 MOCK.hit('nameplate1','Player-other');marked(nil)
 MOCK.hit('nameplate1');marked('nameplate1')

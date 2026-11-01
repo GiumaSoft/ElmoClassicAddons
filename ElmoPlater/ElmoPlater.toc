@@ -2,7 +2,7 @@
 ## Title: ElmoPlater
 ## Notes: Native-position nameplates with personal debuffs, health percentage and visual priority.
 ## Author: Giuseppe
-## Version: 2.2.0
+## Version: 2.2.1
 ## SavedVariablesPerCharacter: ElmoPlaterDB
 ## OptionalDeps: ClassicTarget
 

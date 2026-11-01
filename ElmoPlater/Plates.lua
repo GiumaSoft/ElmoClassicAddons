@@ -20,7 +20,9 @@ local function make(plate)
     f.bar:SetStatusBarTexture(WHITE)
     f.percent = text(f.bar, 12); f.percent:SetPoint("CENTER")
     f.name = text(f, 10); f.name:SetPoint("BOTTOMLEFT", f, "TOPLEFT", 0, 3)
-    f.level = text(f, 10); f.level:SetPoint("BOTTOMRIGHT", f, "TOPRIGHT", 0, 3)
+    f.name:SetHeight(14); f.name:SetJustifyH("LEFT"); f.name:SetWordWrap(false)
+    f.level = text(f, 10); f.level:SetPoint("BOTTOMLEFT", f.name, "BOTTOMRIGHT", 6, 0)
+    f.level:SetHeight(14); f.level:SetJustifyH("LEFT"); f.level:SetWordWrap(false)
     f.icons = {}; f:Hide()
     return {plate = plate, bounds = bounds, frame = f, auras = {}}
 end
