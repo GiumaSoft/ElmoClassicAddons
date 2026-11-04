@@ -15,8 +15,9 @@ https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278
 
 The native pooled UnitFrame owns HealthBarsContainer.healthBar. Addon-owned
 UIParent bounds follow that region. Only owned bounds are measured. Artwork
-normalizes effective scale and frame level. The chosen engaged mob's rectangle
-grows upward to twice its usual height. Global dimensions/stacking are unchanged.
+normalizes effective scale and frame level. Base bars grow upward to twice the
+native health-bar height; the chosen engaged mob doubles that base again.
+Global dimensions/stacking are unchanged.
 
 [Plater](https://github.com/Tercioo/Plater-Nameplates/blob/master/Plater.lua)
 demonstrates owned hit-test frames and guarded native bindings. ElmoPlater binds
@@ -35,6 +36,15 @@ cooldown data. GetSpellCooldownDuration(..., true) ignores GCD; the numeric fall
 compares the spell cooldown with spell 61304's GCD. Charges are checked separately.
 Unknown data fails closed rather than fabricating a usable spell or missing aura.
 
+Forever's CombatLogDocumentation marks COMBAT_LOG_EVENT_UNFILTERED as restricted:
+https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/CombatLogDocumentation.lua
+Interface 16000-16999 never registers or unregisters that event, regardless of
+IsCombatLogRestricted or getter availability. Other clients unregister it only
+after a registration. Public UnitThreatSituation("player", unit), including status
+0, and personal harmful auras provide engagement evidence while the player is in
+combat. Secret threat values are ignored. GetBuildInfo's interface distinguishes
+Forever from Classic Era; WOW_PROJECT_MAINLINE alone does not.
+
 `scripts/tests/ElmoPlater/test_rules.py` exercises A/B/C multi-debuff decisions,
 explicit order including AoE, explicit lowest-health rules, resources, own CD,
 GCD/charges, refresh/count limits, AND/OR/grouping, restricted values, editor
@@ -44,6 +54,17 @@ C_SpellBook readers or Classic spell-tab readers; tests cover both paths. `test_
 attacked-only enlargement, native containment, debuff rows above the bar,
 expiry, colours, and restoration. Both use Lua 5.1 fixtures, not the
 native engine. `scripts/tests/test_forever.py` adds modern/restricted API checks.
+`test_forever_combat_log.py` rejects both registration and removal of the combat-log
+event on Forever, including failures that do not throw through pcall, and checks
+public-threat/personal-aura fallback, secret threat and end-of-combat cleanup.
+`test_secret_health.py` checks that protected health/max-health values go directly
+to StatusBar:SetMinMaxValues/SetValue and protected percentages go to
+FontString:SetFormattedText using UnitHealthPercent with CurveConstants.ScaleTo100.
+These display APIs accept secret arguments on Forever. Such values are never
+compared for priority. Readable debuff rules without health constraints remain
+eligible; health rules and unreadable aura conditions cannot match.
+https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleStatusBarAPIDocumentation.lua
+https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleFontStringAPIDocumentation.lua
 Live graphical rendering and overlap targeting have not been certified by mocks.
 
 `scripts/tests/ElmoPlater/test_dynamic_health.py` verifies schema-v1 migration

@@ -184,9 +184,11 @@ end
 local function render(record, now)
     local unit, f = record.unit, record.frame
     local guid = unit and A.Text(A.Call(UnitGUID, unit))
-    local hp, max = A.Number(A.Call(UnitHealth, unit)), A.Number(A.Call(UnitHealthMax, unit))
-    -- Never leave native artwork hidden when the client withholds identity or health.
-    if not guid or not hp or not max then
+    local health, maximum = A.Call(UnitHealth, unit), A.Call(UnitHealthMax, unit)
+    local hp, max = A.Number(health), A.Number(maximum)
+    local privateHealth = A.Secret(health) or A.Secret(maximum)
+    -- Protected health can go directly to display APIs; missing data cannot.
+    if not guid or not (A.Secret(health) or hp) or not (A.Secret(maximum) or max) then
         if record.native then A.Call(record.native.SetAlpha, record.native, record.alpha or 1) end
         record.priority = false
         f:ClearAllPoints(); f:SetAllPoints(record.bounds)
@@ -198,6 +200,12 @@ local function render(record, now)
     end
     -- Rebind safely if Blizzard replaces a pooled unit frame.
     if record.plate.UnitFrame ~= record.native then f:Hide(); return false end
+    -- Public personal threat replaces combat-log evidence on restricted clients.
+    if not A.attacked[guid] and not A.CombatLogAvailable() and
+        A.Bool(A.Call(UnitAffectingCombat, "player")) == true and
+        A.Number(A.Call(UnitThreatSituation, "player", unit)) then
+        A.attacked[guid] = true
+    end
     local scale = A.Number(A.Call(record.plate.GetEffectiveScale, record.plate))
     local uiScale = A.Number(A.Call(UIParent.GetEffectiveScale, UIParent)) or 1
     if scale and scale > 0 then
@@ -207,8 +215,18 @@ local function render(record, now)
     record.native:SetAlpha(0)
     record.health = hp and max and max > 0 and math.max(0, hp) or math.huge
     record.fraction = hp and max and max > 0 and math.max(0, math.min(1, hp / max)) or 2
-    f.bar:SetMinMaxValues(0, 1); f.bar:SetValue(record.fraction <= 1 and record.fraction or 0)
-    f.percent:SetText(record.fraction <= 1 and math.floor(record.fraction * 100 + .5) .. "%" or "?")
+    record.privateHealth = privateHealth
+    if privateHealth then
+        f.bar:SetMinMaxValues(0, maximum); f.bar:SetValue(health)
+        local curve = CurveConstants and CurveConstants.ScaleTo100
+        local percent = curve and A.Call(UnitHealthPercent, unit, true, curve)
+        if A.Secret(percent) or A.Number(percent) then
+            f.percent:SetFormattedText("%.0f%%", percent)
+        else f.percent:SetText("") end
+    else
+        f.bar:SetMinMaxValues(0, 1); f.bar:SetValue(record.fraction <= 1 and record.fraction or 0)
+        f.percent:SetText(record.fraction <= 1 and math.floor(record.fraction * 100 + .5) .. "%" or "?")
+    end
     local denied = A.Bool(A.Call(UnitIsTapDenied, unit)) == true
     local r, g, b, border = .85, .12, .12, 1
     if denied then r, g, b, border = .55, .55, .55, .025
@@ -249,10 +267,14 @@ end
 function A.Update(refreshAuras, changedUnit)
     if not A.ready then return end
     local list, now = {}, GetTime()
+    A.privateHealthActive = false
     for _, record in pairs(A.units) do
         if refreshAuras and (not changedUnit or changedUnit == record.unit) and
             record.unit and A.Text(A.Call(UnitGUID, record.unit)) == record.guid then scan(record) end
-        if render(record, now) then list[#list + 1] = record end
+        if render(record, now) then
+            list[#list + 1] = record
+            if record.privateHealth then A.privateHealthActive = true end
+        end
     end
     table.sort(list, A.Better)
     A.priorityTarget = A.Rules.Choose(list, now)
@@ -268,7 +290,7 @@ function A.Update(refreshAuras, changedUnit)
         local height = A.Number(A.Call(record.bounds.GetHeight, record.bounds)) or 0
         record.frame:ClearAllPoints()
         record.frame:SetPoint("BOTTOMLEFT", record.bounds, "BOTTOMLEFT", 0, 0)
-        record.frame:SetPoint("TOPRIGHT", record.bounds, "TOPRIGHT", 0, priority and height or 0)
+        record.frame:SetPoint("TOPRIGHT", record.bounds, "TOPRIGHT", 0, height * (priority and 3 or 1))
         local borderSize = (record.selected or priority) and 2 or 1
         if record.borderSize ~= borderSize then
             record.frame:SetBackdrop({bgFile = WHITE, edgeFile = WHITE, edgeSize = borderSize})

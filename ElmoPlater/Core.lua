@@ -1,7 +1,7 @@
 local addonName, A = ...
 ElmoPlater = A
 ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units, A.attacked = "2.2.2", {}, {}, {}
+A.version, A.records, A.units, A.attacked = "2.2.3", {}, {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -25,16 +25,23 @@ function A.Bool(v)
     if not A.Secret(v) and type(v) == "boolean" then return v end
 end
 function A.CombatLogAvailable()
+    -- Forever reserves the event for Blizzard even outside restricted combat.
+    local _, _, _, interface = A.Call(GetBuildInfo)
+    if A.Number(interface) and interface >= 16000 and interface < 17000 then return false end
     local restricted = A.Call(C_CombatLog and C_CombatLog.IsCombatLogRestricted)
     return not A.Secret(restricted) and restricted ~= true and
         type(C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo) == "function"
 end
 function A.RegisterCombatLog()
     if A.CombatLogAvailable() then
+        if A.combatLogRegistered then return end
         local valid = A.Call(C_EventUtils and C_EventUtils.IsEventValid, "COMBAT_LOG_EVENT_UNFILTERED")
-        if A.Bool(valid) ~= false then A.Call(A.frame.RegisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED") end
-    else
+        if A.Bool(valid) ~= false then
+            A.combatLogRegistered = pcall(A.frame.RegisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED")
+        end
+    elseif A.combatLogRegistered then
         A.Call(A.frame.UnregisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED")
+        A.combatLogRegistered = false
     end
 end
 function A.Print(text)
@@ -106,6 +113,28 @@ function A.Command(msg)
     command = command:lower()
     if command == "" or command == "config" or command == "settings" then
         A.Settings.Toggle()
+    elseif command == "status" then
+        local visible, custom, private = 0, 0, 0
+        for _, record in pairs(A.units) do
+            custom = custom + 1
+            if record.frame:IsShown() then visible = visible + 1 end
+            if record.privateHealth then private = private + 1 end
+        end
+        A.Print("Ready: " .. tostring(A.ready) .. "; native plates: " .. #C_NamePlate.GetNamePlates() ..
+            "; tracked: " .. custom .. "; custom visible: " .. visible .. "; private health: " .. private)
+        for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
+            if not plate:IsForbidden() then
+                local unit = A.Text(A.Call(plate.GetUnit, plate)) or A.Text(plate.unitToken)
+                if unit then
+                    local guid, hp = A.Call(UnitGUID, unit), A.Call(UnitHealth, unit)
+                    local native = plate.UnitFrame
+                    local healthBar = native and native.HealthBarsContainer and native.HealthBarsContainer.healthBar
+                    A.Print(unit .. ": GUID " .. (A.Secret(guid) and "private" or A.Text(guid) and "readable" or "missing") ..
+                        "; HP " .. (A.Secret(hp) and "private" or A.Number(hp) and "readable" or "missing") ..
+                        "; native health bar: " .. tostring(healthBar ~= nil))
+                end
+            end
+        end
     elseif command == "debuff" then
         if value:lower() == "any" then
             A.db.rules, A.db.watchDebuff = {}, ""

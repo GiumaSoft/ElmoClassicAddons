@@ -33,7 +33,7 @@ def load_dungeon():
 class ForeverTests(unittest.TestCase):
     def test_all_packages_and_versions(self):
         for client,interface in [('classic',11509),('forever',16001)]:
-            for name,version in [('ElmoLeveling','1.6.4'),('ElmoPlater','2.2.2'),('ElmoDungeonLoot','2.2.0'),('ElmoSpellTracker','1.0.2')]:
+            for name,version in [('ElmoLeveling','1.6.4'),('ElmoPlater','2.2.3'),('ElmoDungeonLoot','2.2.0'),('ElmoSpellTracker','1.0.2')]:
                 path=ROOT/'.build'/client/name
                 toc=(path/(name+'.toc')).read_text()
                 self.assertIn('## Interface: '+str(interface),toc)
@@ -110,10 +110,12 @@ class ForeverTests(unittest.TestCase):
 
     def test_forever_nameplates_and_restricted_fallback(self):
         sys.path.insert(0,str(HERE/'ElmoPlater'))
+        from fixture import create_vm
         with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
-            state=runpy.run_path(str(HERE/'ElmoPlater/test_prototype.py'))
-        vm=state['vm']
+            vm,_=create_vm()
         vm.execute('''
+        function GetBuildInfo()return '1.60.1','70790','',16001 end
+        MOCK.start()
         MOCK.event('PLAYER_ENTERING_WORLD')
         local mob,plate=MOCK.mob('nameplate9','Creature-forever','Forever enemy')
         local record=A.units.nameplate9
@@ -123,7 +125,8 @@ class ForeverTests(unittest.TestCase):
         local health,guid=UnitHealth,UnitGUID
         UnitHealth=function(unit)if unit=='nameplate9' then return SECRET end;return health(unit)end
         A.Update(false)
-        assert(not record.frame:IsShown() and plate.UnitFrame.alpha==1)
+        assert(record.frame:IsShown() and plate.UnitFrame.alpha==0 and record.privateHealth)
+        assert(rawequal(record.frame.bar.value,SECRET) and not A.priorityTarget)
         UnitHealth=health;A.Update(false)
         assert(record.frame:IsShown() and plate.UnitFrame.alpha==0)
         UnitGUID=function(unit)if unit=='nameplate9' then return SECRET end;return guid(unit)end
@@ -136,11 +139,21 @@ class ForeverTests(unittest.TestCase):
         MOCK.logRestricted=true;A.RegisterCombatLog()
         assert(not A.frame.events.COMBAT_LOG_EVENT_UNFILTERED)
         MOCK.logRestricted=false;A.RegisterCombatLog()
-        assert(A.frame.events.COMBAT_LOG_EVENT_UNFILTERED)
+        assert(not A.frame.events.COMBAT_LOG_EVENT_UNFILTERED)
         MOCK.logRestricted=true;A.CombatLog(1,SECRET,false,SECRET,nil,nil,nil,SECRET)
         A.Remove('nameplate9');assert(plate.UnitFrame.alpha==1)
         assert(MOCK.restrictedReads==0 and MOCK.foreignWrites==0 and MOCK.hookAttempts==0)
         ''')
+
+    def test_forever_never_touches_restricted_combat_log(self):
+        sys.path.insert(0,str(HERE/'ElmoPlater'))
+        with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
+            runpy.run_path(str(HERE/'ElmoPlater/test_forever_combat_log.py'))
+
+    def test_forever_displays_secret_health(self):
+        sys.path.insert(0,str(HERE/'ElmoPlater'))
+        with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
+            runpy.run_path(str(HERE/'ElmoPlater/test_secret_health.py'))
 
     def test_forever_cooldowns_and_secret_values(self):
         vm=LuaRuntime(unpack_returned_tuples=True)

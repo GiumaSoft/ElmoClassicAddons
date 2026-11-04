@@ -1,4 +1,15 @@
-# ElmoPlater 2.2.2
+# ElmoPlater 2.2.3
+
+## Changes in 2.2.3
+
+- Doubled the base health-bar height; priority bars double that new base again.
+- Fixed Forever's Blizzard-only combat-log registration/removal warnings.
+- Kept bars and percentages visible when health is protected, using display APIs.
+- Used readable personal threat and harmful auras for engagement without combat logs.
+- Preserved readable debuff rules without health constraints when HP is private.
+- Added `/eplater status` diagnostics and explained unavailable health priorities in the Rules Manager.
+
+Health comparisons and lowest-HP priority still require readable health values.
 
 Classic Era / Forever nameplates with solid reaction colours, contrasting borders,
 health percentage, difficulty-coloured levels and all your active harmful debuffs.
@@ -46,6 +57,8 @@ remaining ties use lowest absolute HP. Turn it off for simple lowest-HP ties.
 
 Only mobs you attacked during the current combat qualify for the marker,
 including your selected target. Nearby untouched mobs do not qualify.
+On Forever, engagement is identified by your public threat on the mob or your
+visible harmful auras, since the combat-log event is reserved for Blizzard.
 
 Every priority is an ordinary enabled rule, evaluated from top to bottom:
 
@@ -74,7 +87,8 @@ the first rule, ready Thunder Clap can pick a mob missing it. If Thunder Clap is
 cooling down, Rend can prefer a partly covered mob. Move Rend above Health <20%
 if you want the Rend rule to win even when another mob is below 20%.
 
-The chosen rectangle is drawn in front and doubled in height, growing upward.
+The base rectangle is twice the native health bar's height, growing upward.
+The chosen rectangle is drawn in front and doubles that base height again.
 The full name and level are centered together above the health bar. Names keep
 their natural single-line width, extending beyond either side of the bar when
 needed; the level follows the full name with a 6-pixel gap.
@@ -94,10 +108,19 @@ once by the v2 rule-schema migration.
 
 The addon does not resize global native nameplates, measure restricted regions,
 hook Plater, or target by GUID. Artwork and permitted native hit points are restored
-when a pooled nameplate is removed. If identity or health is private, Blizzard's
-artwork remains visible. Restricted aura data is not treated as a missing debuff.
-When combat logs are restricted, visible personal auras can identify engaged mobs;
-damage-only attack history is unavailable. Tracking clears on death/combat end.
+when a pooled nameplate is removed. Protected health is passed directly to the
+health bar and percentage text through Blizzard's display APIs. If identity or
+health data is missing, Blizzard's artwork remains visible. Restricted aura data
+is not treated as a missing debuff.
+Forever never registers or unregisters the restricted combat-log event. Public
+personal threat and visible personal auras can identify engaged mobs when combat
+logs are unavailable; private threat is ignored. Damage-only attack history is
+unavailable. Tracking clears on death/combat end.
+
+Health thresholds, health ranges and lowest-HP selection require readable HP.
+When health is protected, bars remain visible; readable debuff rules without
+health constraints can still match. Equal unknown HP uses the stable GUID order.
+The Rules Manager reports when current nameplate health is private.
 
 Lua 5.1 behavioral checks cover rules, resources/cooldowns, conditions, configuration
 save/cancel, dynamic health order/removal/migration, private-value handling and pooled frames. These are simulated API

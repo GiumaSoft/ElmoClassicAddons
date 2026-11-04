@@ -181,13 +181,15 @@ function U.Tick(now)
     local matched=chosen and A.db.rules[chosen.suggestedRule]
     U.status:SetText(matched and ("Priority: "..(A.Text(A.Call(UnitName,chosen.unit)) or "Mob")..
         " · Rule "..chosen.suggestedRule..": "..A.Rules.Name(matched))
-        or "Priority: no matching rule for an engaged mob")
+        or (A.privateHealthActive and "Health is private: health-based priority is unavailable."
+        or "Priority: no matching rule for an engaged mob"))
     if U.fields.kind.value=="debuff" then
         local id=U.fields.spellID.value
         local reason
         if id and id>0 then local ready;ready,reason=A.Spells.Ready(id) end
         U.readiness:SetText("Selected spell: "..(reason or "Choose an ability"))
-    else U.readiness:SetText("Health rules do not require an ability, resources or cooldown checks.") end
+    else U.readiness:SetText(A.privateHealthActive and "Health rules require readable health values."
+        or "Health rules do not require an ability, resources or cooldown checks.") end
 end
 function U.Create()
     if U.frame then return end
@@ -222,7 +224,7 @@ function U.Create()
     button(f,"Move up",18,-536,96,function()U.Move(-1)end)
     button(f,"Move down",123,-536,96,function()U.Move(1)end)
     button(f,"Remove",228,-536,96,U.Remove)
-    label(f,"Health rules are always available. Debuffs appear after you apply them. + Add rule appends a new entry.",18,-577,11,306)
+    label(f,"Health rules need readable HP. Debuffs appear after you apply them. + Add rule appends a new entry.",18,-577,11,306)
     U.ruleTitle=label(f,"",350,-78,14,590)
     U.groups={}
     local function field(key,title,items,kind,width)

@@ -108,7 +108,7 @@ function R.Choose(list,now)
     local engaged={}
     for _,record in ipairs(list) do
         record.suggestedRule,record.covered=nil,0
-        if A.attacked[record.guid] and A.Number(record.health) and record.fraction<=1 and
+        if A.attacked[record.guid] and (record.fraction<=1 or record.privateHealth) and
             A.Bool(A.Call(UnitCanAttack,"player",record.unit))==true then
             engaged[#engaged+1]=record
             local seen={}
@@ -133,10 +133,13 @@ function R.Choose(list,now)
                 local context={enemies=#engaged,missing=missing,now=now}
                 local best
                 for _,record in ipairs(engaged) do
-                    local hp=record.fraction*100
-                    local applies=not debuff or R.Missing(record,rule,now)
-                    if rule.kind=="health_below" then applies=hp<rule.threshold end
-                    if applies and hp>=rule.minHealth and hp<=rule.maxHealth and
+                    local hp=record.fraction<=1 and record.fraction*100
+                    local applies
+                    if debuff then applies=R.Missing(record,rule,now)
+                    elseif hp then applies=rule.kind~="health_below" or hp<rule.threshold end
+                    local inRange=hp and hp>=rule.minHealth and hp<=rule.maxHealth or
+                        not hp and rule.minHealth==0 and rule.maxHealth==100
+                    if applies and inRange and
                         A.Conditions.Match(rule.conditions,record,rule,context) then
                         if not best or (debuff and rule.preferCovered and record.covered>best.covered) or
                             (not debuff or not rule.preferCovered or record.covered==best.covered) and lowest(record,best) then best=record end

@@ -1,7 +1,7 @@
 from fixture import create_vm
 vm,ns=create_vm()
 vm.execute(r"""
-MOCK.start();assert(A.ready and A.version=='2.2.2')
+MOCK.start();assert(A.ready and A.version=='2.2.3')
 local a,pa=MOCK.mob('nameplate1','Creature-a','Murloc Streamrunner')
 local b,pb=MOCK.mob('nameplate2','Creature-b','Boar');pb.centerX=950
 assert(A.units.nameplate1 and pa.UnitFrame.alpha==0)
@@ -22,7 +22,7 @@ local function marked(unit)
   assert(record.priority==priority,'Wrong priority: '..token)
   local x,y,w,h=MOCK.worldRect(record.frame)
   local bx,by,bw,bh=MOCK.worldRect(record.bounds)
-  assert(x==bx and y==by and w==bw and h==bh*(priority and 2 or 1),'Invalid rectangle: '..token)
+  assert(x==bx and y==by and w==bw and h==bh*(priority and 4 or 2),'Invalid rectangle: '..token)
   assert(not record.frame.mouse and not record.frame.bar.mouse)
   local nx,ny,nw,nh=MOCK.worldRect(record.frame.name)
   local lx,ly,lw,lh=MOCK.worldRect(record.frame.level)
