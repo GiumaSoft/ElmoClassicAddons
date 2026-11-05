@@ -18,6 +18,11 @@ local function make(plate)
     f.bar = CreateFrame("StatusBar", nil, f); f.bar:EnableMouse(false)
     f.bar:SetPoint("TOPLEFT", 1, -1); f.bar:SetPoint("BOTTOMRIGHT", -1, 1)
     f.bar:SetStatusBarTexture(WHITE)
+    f.questBag = f.bar:CreateTexture(nil, "OVERLAY")
+    f.questBag:SetSize(16, 16); f.questBag:SetPoint("RIGHT", f.bar, "LEFT", -4, 0)
+    f.questBag:Hide()
+    f.questKill = f.bar:CreateTexture(nil, "OVERLAY")
+    f.questKill:SetSize(16, 16); f.questKill:Hide()
     f.percent = text(f.bar, 12); f.percent:SetPoint("CENTER")
     f.header = CreateFrame("Frame", nil, f); f.header:EnableMouse(false)
     f.header:SetPoint("BOTTOM", f, "TOP", 0, 3); f.header:SetHeight(14)
@@ -290,6 +295,11 @@ local function render(record, now)
         child.count:SetText(aura.count > 1 and aura.count or ""); child:Show()
     end
     for i = count + 1, #f.icons do f.icons[i]:Hide() end
+    local loot, slay = A.QuestLoot.GetIcons(record.guid, now)
+    f.questBag:SetTexture(loot); f.questBag:SetShown(loot ~= nil)
+    f.questKill:SetTexture(slay); f.questKill:SetShown(slay ~= nil)
+    f.questKill:ClearAllPoints()
+    f.questKill:SetPoint("RIGHT", f.bar, "LEFT", loot and -22 or -4, 0)
     f:Show(); return true
 end
 

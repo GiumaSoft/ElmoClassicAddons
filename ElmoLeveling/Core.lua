@@ -54,6 +54,7 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         A.Mobs.Scan()
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         A.SetCombat(event == "PLAYER_REGEN_DISABLED")
+        A.Mobs.Scan()
         A.UI.Update()
     elseif event == "PLAYER_XP_UPDATE" then
         if unit ~= "player" then return end
@@ -78,10 +79,20 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         if A.Mobs.Combat() then A.UI.Update() end
     elseif event == "PLAYER_TARGET_CHANGED" then A.Mobs.Observe("target")
     elseif event == "UPDATE_MOUSEOVER_UNIT" then A.Mobs.Observe("mouseover")
-    elseif event == "UNIT_TARGET" then A.Mobs.Observe(unit == "player" and "target" or unit .. "target")
+    elseif event == "UNIT_TARGET" then
+        unit = A.Text(unit)
+        if unit then
+            A.Mobs.Observe(unit)
+            A.Mobs.Observe(unit == "player" and "target" or unit .. "target")
+        end
     elseif event == "NAME_PLATE_UNIT_ADDED" then
         A.Mobs.plates[unit] = true; A.Mobs.Observe(unit)
-    elseif event == "NAME_PLATE_UNIT_REMOVED" then A.Mobs.plates[unit] = nil
+    elseif event == "NAME_PLATE_UNIT_REMOVED" then A.Mobs.Observe(unit); A.Mobs.plates[unit] = nil
+    elseif event == "UNIT_FLAGS" or event == "UNIT_HEALTH" or event == "UNIT_THREAT_LIST_UPDATE" or
+        event == "UNIT_THREAT_SITUATION_UPDATE" then
+        unit = A.Text(unit)
+        if unit == "player" or unit == "pet" then A.Mobs.Scan()
+        elseif unit then A.Mobs.Observe(unit) end
     elseif event == "PLAYER_LOGOUT" then
         A.Mobs.Tick(true)
         A.Save()
@@ -94,6 +105,7 @@ for _, event in ipairs({"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_XP_UPDA
     "ZONE_CHANGED_NEW_AREA",
     "BAG_UPDATE_DELAYED", "GET_ITEM_INFO_RECEIVED", "ITEM_DATA_LOAD_RESULT", "CHAT_MSG_COMBAT_XP_GAIN",
     "COMBAT_LOG_EVENT_UNFILTERED", "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "UNIT_TARGET",
+    "UNIT_FLAGS", "UNIT_HEALTH", "UNIT_THREAT_LIST_UPDATE", "UNIT_THREAT_SITUATION_UPDATE",
     "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "PLAYER_EQUIPMENT_CHANGED",
     "CHARACTER_POINTS_CHANGED", "PLAYER_TALENT_UPDATE", "TRAIT_CONFIG_UPDATED", "TRAIT_CONFIG_LIST_UPDATED", "SPELLS_CHANGED", "SKILL_LINES_CHANGED", "GROUP_ROSTER_UPDATE"}) do
     A.Compat.Register(frame, event)

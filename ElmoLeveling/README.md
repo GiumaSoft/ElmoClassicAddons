@@ -1,4 +1,4 @@
-# ElmoLeveling 1.6.4
+# ElmoLeveling 1.6.5
 
 An English leveling dashboard for **WoW Classic Era 1.15.9 (11509)** and **WoW Forever 1.60.1 (16001)**. Both packages use the same source files; the build generates only the client selector and manifest. API capability checks handle talents, tooltips, spells and protected combat data.
 
@@ -38,11 +38,17 @@ those records over the last 60 online seconds. Zero-XP kills cannot be counted
 through this source. A mob level is used only when public unit data can identify
 it; unavailable or secret levels/identities stay **?**.
 
-**Time** and **XP/s** remain **--** when the client does not provide the required
-combat data. The addon does not substitute encounter duration or guess a kill
-time. If the client exposes unrestricted combat events in the future, the
-existing per-creature timing support can use them. Protected combat values are
-not decoded or reconstructed.
+On Forever, **Time** and **XP/s** use an observed per-creature estimate, marked
+with **~**. Timing starts when public unit data shows that the mob is fighting
+you, your pet or a party member, and stops at its observed death. If the unit
+disappears but its GUID is present in the XP notice, that notice closes the timer.
+Looking at a mob does not start timing; changing targets does not reset it.
+Evading and pulling again starts a new timer. Without an identifiable start or
+an unambiguous XP-to-mob match, both fields remain **--**. New fights after
+`/reload` can be measured; historical unknown times cannot be recovered.
+
+Classic Era retains first-hit/miss-to-death combat-log timing. Protected values
+are not decoded or reconstructed on either client.
 
 ## Equipment upgrades
 
@@ -50,6 +56,8 @@ A **purple border** marks currently usable estimated upgrades in native Forever
 bags, including combined bags, and in the installed BetterBags Camelot edition.
 Borders are mouse-transparent and do not alter item clicks or quality textures.
 The meter can be hidden while borders continue to update.
+Level and equipped item links are checked once a second, so delayed client
+updates also invalidate the comparison and refresh existing borders.
 
 The comparison uses relative class/role leveling weights and relevant weapon
 DPS. Native group roles take precedence; otherwise current C_Traits ranks select

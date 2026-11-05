@@ -80,3 +80,20 @@ the visible counters to zero immediately. Delayed frames retain the cadence's
 phase. Shared client behavior passes 15 differential scenarios.
 
 Respawn averages are displayed in rounded whole seconds, e.g. 135s, in both the column and tooltip.
+
+Restricted clients also measure public per-GUID engagement intervals. A readable
+UnitAffectingCombat plus group UnitThreatSituation (including status 0), or a
+readable UnitIsUnit match from the mob's target to player/pet/party, starts timing.
+UNIT_FLAGS, UNIT_HEALTH and threat/target events update observations; the existing
+one-second scan catches missed events. Public death ends timing; a GUID-bearing
+XP notice can end it when the unit disappears. Name-only XP must match a unique
+observed corpse. Five seconds of grace allow death/XP to follow combat clearing;
+a repull resets that mob's start. Travel/reset discards unfinished observations.
+These intervals and derived XP/s show ~ and retain that marker in saved history.
+They do not replace Classic Era's combat-log timestamps. Interface 16000-16999
+never registers or reads the Blizzard-only combat-log event, even when the
+restriction flag is false outside combat. Primary API reference:
+https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua
+test_kill_timing.py adds twelve Lua 5.1 regressions for correlation, target changes,
+group/pet engagement, private values, repulls, reset/travel, persistence, UI
+formatting and the Forever combat-log guard. These are simulated checks.

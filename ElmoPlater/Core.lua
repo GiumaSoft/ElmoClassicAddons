@@ -1,7 +1,7 @@
 local addonName, A = ...
 ElmoPlater = A
 ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units, A.attacked = "2.2.4", {}, {}, {}
+A.version, A.records, A.units, A.attacked = "2.2.5", {}, {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -245,13 +245,15 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
         elseif event == "UNIT_AURA" then A.lastAuraUnit = A.Text(unit); A.Update(true, unit)
         elseif event == "PLAYER_TARGET_CHANGED" then A.Update(true, "target")
         elseif event == "PLAYER_REGEN_DISABLED" then A.Update(true)
+        elseif event == "QUEST_LOG_UPDATE" or event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" or
+            event == "BAG_UPDATE_DELAYED" then A.QuestLoot.Invalidate(); A.Update(false)
         else A.Update(false) end
     end
 end)
 for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "NAME_PLATE_UNIT_ADDED",
     "NAME_PLATE_UNIT_REMOVED", "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_FACTION", "UNIT_FLAGS",
     "PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT",
-    "CVAR_UPDATE"}) do
+    "CVAR_UPDATE", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "BAG_UPDATE_DELAYED"}) do
     A.Call(A.frame.RegisterEvent, A.frame, event)
 end
 A.frame:SetScript("OnUpdate", function(_, dt)

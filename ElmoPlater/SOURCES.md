@@ -79,6 +79,23 @@ https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_AP
 https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleFontStringAPIDocumentation.lua
 Live graphical rendering and overlap targeting have not been certified by mocks.
 
+The optional quest markers read QuestieTooltips.lookupByKey["m_<npcID>"],
+the same accepted-objective registry used by Questie's own nameplate module:
+https://github.com/Questie/Questie/blob/master/Modules/QuestieNameplate.lua
+Only incomplete kill/slay and item/loot objectives in the player's current quest
+log qualify. Questie's objective icon type takes precedence over a generic type,
+so talk/interact objectives are not mistaken for kills. The two icons may coexist.
+Native quest-log indices take precedence over Questie's accepted-quest registry
+when available. This does not scan or rewrite tooltip frames or infer item drops
+from a generic quest-related flag. Owned health-bar regions reference Questie's
+installed slay/loot textures, respecting profile overrides and the pfquest theme;
+no Questie assets are bundled. Quest events invalidate a
+half-second per-creature cache; the existing update tick catches delayed Questie
+updates. test_quest_loot.py covers independent kill and item progress, abandonment,
+Questie textures/themes, missing/private data, legacy/modern log indices, pooled
+cleanup and nonoverlapping placement at normal and priority heights. Questie
+remains optional.
+
 `scripts/tests/ElmoPlater/test_dynamic_health.py` verifies schema-v1 migration
 without duplicating rules, editable strict percentage thresholds, health/debuff
 reordering, disabled/deleted rules, no hidden HP fallback, absolute-HP selection

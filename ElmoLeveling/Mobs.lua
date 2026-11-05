@@ -70,6 +70,9 @@ function M.ResetRespawnObservations()
     M.respawnSightings = {}
     M.respawnUpdatedAt = GetTime()
     M.respawnStartedAt = M.respawnUpdatedAt
+    for _, seen in pairs(M.units) do
+        seen.fightStart, seen.deathAt, seen.stoppedAt, seen.timingUsed = nil, nil, nil, nil
+    end
 end
 
 local function rememberAppearance(guid, dead)
@@ -177,7 +180,8 @@ function M.Init()
             if type(kill) == "table" and text(kill.name) and level(kill.playerLevel) and
                 number(kill.at) and kill.at <= db.seconds and number(kill.xp) and kill.xp % 1 == 0 then
                 kills[#kills + 1] = {name = kill.name, mobLevel = level(kill.mobLevel),
-                    playerLevel = kill.playerLevel, xp = kill.xp, at = kill.at, killTime = number(kill.killTime)}
+                    playerLevel = kill.playerLevel, xp = kill.xp, at = kill.at, killTime = number(kill.killTime),
+                    killTimeEstimated = number(kill.killTime) and kill.killTimeEstimated == true or nil}
                 if #kills == M.LIMIT then break end
             end
         end
@@ -213,16 +217,53 @@ function M.Parse(message)
     end
 end
 
+local members = {"player", "pet", "party1", "partypet1", "party2", "partypet2", "party3", "partypet3", "party4", "partypet4"}
+
+local function observeTiming(unit, seen, dead, wasDead)
+    if not A.startedAt or A.Compat.CombatAvailable() then return end
+    local now = GetTime()
+    if safe(dead) and dead == true then
+        if seen.fightStart then seen.deathAt = seen.deathAt or now end
+        return
+    end
+    if safe(dead) and dead == false and wasDead then
+        seen.fightStart, seen.deathAt, seen.stoppedAt, seen.timingUsed = nil, nil, nil, nil
+    end
+    local combat = A.Call(UnitAffectingCombat, unit)
+    if not safe(combat) then return end
+    if combat == false then
+        -- Keep a short grace period: combat can clear just before death/XP arrives.
+        if seen.fightStart then seen.stoppedAt = seen.stoppedAt or now end
+    elseif combat == true then
+        for _, member in ipairs(members) do
+            local engaged = number(A.Call(UnitThreatSituation, member, unit))
+            if not engaged then
+                local target = A.Call(UnitIsUnit, unit .. "target", member)
+                engaged = safe(target) and target == true
+            end
+            if engaged then
+                if seen.stoppedAt or seen.timingUsed then
+                    seen.fightStart, seen.deathAt, seen.timingUsed = now, nil, nil
+                else seen.fightStart = seen.fightStart or now end
+                seen.stoppedAt = nil
+                break
+            end
+        end
+    end
+end
+
 function M.Observe(unit)
     if type(UnitGUID) ~= "function" or type(UnitName) ~= "function" then return end
     local guid = UnitGUID(unit)
     if not npc(guid) then return end
     local name = text(UnitName(unit))
     if not name then return end
-    local old = M.units[guid]
+    local old = M.units[guid] or {}
     local dead = type(UnitIsDead) == "function" and UnitIsDead(unit)
-    M.units[guid] = {name = name, mobLevel = level(UnitLevel(unit)) or (old and old.mobLevel),
-        dead = safe(dead) and dead == true, seen = GetTime()}
+    observeTiming(unit, old, dead, old.dead)
+    old.name, old.mobLevel = name, level(UnitLevel(unit)) or old.mobLevel
+    old.dead, old.seen = safe(dead) and dead == true, GetTime()
+    M.units[guid] = old
     if type(UnitIsDead) == "function" and safe(dead) and type(dead) == "boolean" then
         observeRespawn(guid, name, dead)
     end
@@ -238,7 +279,7 @@ local function record(node)
     if node.suppressed then return end
     if node.record then return node.record end
     local kill = {name = node.name, mobLevel = node.mobLevel, playerLevel = node.playerLevel,
-        xp = nil, at = node.onlineAt, killTime = node.killTime}
+        xp = nil, at = node.onlineAt, killTime = node.killTime, killTimeEstimated = node.killTimeEstimated}
     node.record = kill
     local index = 1
     while A.db.kills[index] and A.db.kills[index].at > kill.at do index = index + 1 end
@@ -267,8 +308,10 @@ local attacks = {SWING_DAMAGE = true, SWING_MISSED = true, RANGE_DAMAGE = true, 
 local function updateTiming(node)
     if node.attackStart and node.deathStamp and node.deathStamp >= node.attackStart then
         node.killTime = node.deathStamp - node.attackStart
-        if node.record and node.record.killTime ~= node.killTime then
-            node.record.killTime = node.killTime; M.revision = M.revision + 1
+        node.killTimeEstimated = nil
+        if node.record and (node.record.killTime ~= node.killTime or node.record.killTimeEstimated) then
+            node.record.killTime, node.record.killTimeEstimated = node.killTime, nil
+            M.revision = M.revision + 1
         end
     end
 end
@@ -398,6 +441,16 @@ function M.Rate()
     return kept
 end
 
+local function observedTiming(node, packet, seen)
+    if A.Compat.CombatAvailable() or not seen or not seen.fightStart or seen.timingUsed then return end
+    if seen.stoppedAt and packet.when - seen.stoppedAt > 5 then return end
+    if seen.deathAt and math.abs(packet.when - seen.deathAt) > 5 then return end
+    local finish = math.min(seen.deathAt or packet.when, packet.when)
+    if finish < seen.fightStart then return end
+    node.killTime, node.killTimeEstimated = finish - seen.fightStart, true
+    seen.timingUsed = true
+end
+
 function M.Tick(flush)
     M.Scan()
     matchPending()
@@ -419,6 +472,7 @@ function M.Tick(flush)
             end
             local node = {guid = packet.guid, name = packet.name, when = packet.when,
                 onlineAt = packet.onlineAt, mobLevel = seen and seen.mobLevel, playerLevel = packet.playerLevel}
+            observedTiming(node, packet, seen)
             M.deaths[#M.deaths + 1] = node
             if node.guid then M.byGUID[node.guid] = node end
             apply(node, packet)

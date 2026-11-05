@@ -1,4 +1,4 @@
-# ElmoPlater 2.2.4
+# ElmoPlater 2.2.5
 
 ## Changes in 2.2.4
 
@@ -25,6 +25,19 @@ Classic Era / Forever nameplates with solid reaction colours, contrasting border
 health percentage, difficulty-coloured levels and all your active harmful debuffs.
 Other players' and pet debuffs are excluded. Claimed mobs are grey and marked
 `[CLAIMED]`. Native positioning and targeting remain owned by WoW.
+
+## Quest objective markers
+
+With Questie enabled, a 16-pixel knife appears to the left of the health bar for
+an incomplete kill objective, and a bag appears for an item the creature drops
+that you still need. These use Questie's own icon textures and theme settings.
+When both kinds of objective apply, both icons appear side by side, four pixels
+from the bar. Each disappears when its objective is complete or the quest is
+abandoned. They follow the health bar when its priority height changes.
+
+This uses Questie's current objective-to-creature registry on both Classic Era
+and Forever. Questie is optional; without it, or when the creature association is
+unknown to its database, no quest marker is shown. Private data is not inspected.
 
 ## Configuration
 

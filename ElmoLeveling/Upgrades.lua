@@ -317,8 +317,11 @@ local function refresh(button, source)
             bag = data.bagid; link = data.itemInfo and data.itemInfo.itemLink
         end
     else
-        bag = button.GetBagID and button:GetBagID() or source.container:GetID()
-        local info = bag >= 0 and bag <= 4 and C_Container.GetContainerItemInfo(bag, button:GetID())
+        bag = button.GetBagID and button:GetBagID()
+        if bag == nil and source.container then bag = source.container:GetID() end
+        local slot = button:GetID()
+        local info = type(bag) == "number" and bag >= 0 and bag <= 4 and
+            type(slot) == "number" and slot > 0 and C_Container.GetContainerItemInfo(bag, slot)
         link = info and info.hyperlink
     end
     U.Paint(button, bag, link)
@@ -341,7 +344,10 @@ function U.HookBags()
     if not U.qualityHooked and type(SetItemButtonQuality) == "function" then
         hooksecurefunc("SetItemButtonQuality", function(button)
             -- BetterBags supplies its own displayed-item data and draw hook.
-            if button.GetBagID and not button._itemData then
+            -- The shared ItemButton template is also used for BetterBags' bag
+            -- selectors, which have no container/slot and may have no parent.
+            if button.GetBagID and not button._itemData and
+                type(button:GetBagID()) == "number" and button:GetID() > 0 then
                 local source = {container = button:GetParent()}
                 U.buttons[button] = source; refresh(button, source)
             end
@@ -375,6 +381,17 @@ function U.ItemLoaded(id)
     if U.pending[id] then U.Invalidate() end
 end
 function U.Update()
+    -- Level/equipment events can precede the new values returned by the client.
+    -- Recheck the actual inputs so an early repaint cannot keep an old verdict.
+    local level = UnitLevel("player")
+    local changed = U.level ~= level
+    U.level = level
+    U.equipped = U.equipped or {}
+    for slot = 1, 19 do
+        local link = GetInventoryItemLink("player", slot)
+        if U.equipped[slot] ~= link then changed = true; U.equipped[slot] = link end
+    end
+    if changed then U.Invalidate() end
     if not U.dirty and not next(U.pending) then return end
     if next(U.pending) then U.items, U.verdicts = {}, {} end
     U.pending, U.dirty = {}, false

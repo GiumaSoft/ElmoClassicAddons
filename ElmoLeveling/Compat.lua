@@ -18,6 +18,8 @@ function A.Call(fn, ...)
 end
 
 function C.CombatAvailable()
+    local _, _, _, interface = A.Call(GetBuildInfo)
+    if A.IsNumber(interface) and interface >= 16000 and interface < 17000 then return false end
     local get = C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo
     if type(get) ~= "function" then return false end
     local restricted = A.Call(C_CombatLog and C_CombatLog.IsCombatLogRestricted)

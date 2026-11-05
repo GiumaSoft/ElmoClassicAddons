@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: ElmoQuestReport
+## Notes: Report completed quests and objectives to your group.
+## Author: Giuseppe
+## Version: 1.0.0
+
+Core.lua

@@ -56,18 +56,18 @@ function U.SessionTime(seconds)
     return string.format("%dh %dm %ds", math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60)
 end
 
-function U.KillTime(seconds)
-    return A.IsNumber(seconds) and string.format("%.1fs", seconds) or "--"
+function U.KillTime(seconds, estimated)
+    return A.IsNumber(seconds) and ((estimated and "~" or "") .. string.format("%.1fs", seconds)) or "--"
 end
 
 function U.RespawnTime(seconds)
     return A.IsNumber(seconds) and (U.Number(math.floor(seconds + .5)) .. "s") or "--"
 end
 
-function U.XPPerSecond(xp, seconds)
+function U.XPPerSecond(xp, seconds, estimated)
     if not A.IsNumber(xp) or not A.IsNumber(seconds) or seconds <= 0 then return "--" end
     local rate = xp / seconds
-    return A.IsNumber(rate) and string.format("%.1f", rate) or "--"
+    return A.IsNumber(rate) and ((estimated and "~" or "") .. string.format("%.1f", rate)) or "--"
 end
 
 function U.Money(copper, signed)
@@ -113,7 +113,7 @@ function U.CreateMobs()
         GameTooltip:AddLine("Click to expand or collapse the last " .. A.Mobs.LIMIT .. " kills.", .8, .8, .8, true)
         GameTooltip:AddLine("XP@lvl: 75@7 means 75 XP received at character level 7.", .8, .8, .8, true)
         GameTooltip:AddLine(A.Compat.CombatAvailable() and "Time: first recorded hit or miss to the mob's death, including pet and group attacks." or
-            "Forever restricts the combat log. Unavailable kill times and XP/s stay --.", .8, .8, .8, true)
+            "Forever restricts the combat log. ~ marks time from observed group engagement to death or XP; unknown timing stays --.", .8, .8, .8, true)
         GameTooltip:AddLine("XP/s: XP received divided by that mob's kill time.", .8, .8, .8, true)
         GameTooltip:AddLine("Respawn avg: mean wait from a kill to a newly observed living mob with the same name, at any level.", .8, .8, .8, true)
         GameTooltip:AddLine("Respawn averages refresh every 5 seconds; they are observed estimates.", .8, .8, .8, true)
@@ -159,8 +159,9 @@ function U.CreateMobs()
             GameTooltip:AddLine("Mob level: " .. (kill.mobLevel or "?"), 1, 1, 1)
             GameTooltip:AddLine("XP received: " .. (kill.xp ~= nil and U.Number(kill.xp) or "..."), 1, 1, 1)
             GameTooltip:AddLine("Your level at kill: " .. (kill.playerLevel or "?"), 1, 1, 1)
-            GameTooltip:AddLine("Kill time: " .. U.KillTime(kill.killTime), 1, 1, 1)
-            GameTooltip:AddLine("XP/s: " .. U.XPPerSecond(kill.xp, kill.killTime), 1, 1, 1)
+            GameTooltip:AddLine("Kill time: " .. U.KillTime(kill.killTime, kill.killTimeEstimated), 1, 1, 1)
+            GameTooltip:AddLine("XP/s: " .. U.XPPerSecond(kill.xp, kill.killTime, kill.killTimeEstimated), 1, 1, 1)
+            if kill.killTimeEstimated then GameTooltip:AddLine("Estimated from public unit observations, not first-hit timestamps.", .8, .8, .8, true) end
             local average, samples = A.Mobs.RespawnAverage(kill.name)
             GameTooltip:AddLine("Respawn avg: " .. U.RespawnTime(average) .. " (" .. samples .. " samples)", 1, 1, 1)
             GameTooltip:AddLine("Grouped by name only, regardless of mob level. Updated every 5 seconds.", .8, .8, .8, true)
@@ -218,8 +219,8 @@ function U.RefreshMobs()
             row.nameText:SetText(kill.name)
             row.mobLevel:SetText(kill.mobLevel or "?")
             row.xp:SetText((kill.xp ~= nil and U.Number(kill.xp) or "...") .. "@" .. (kill.playerLevel or "?"))
-            row.killTime:SetText(U.KillTime(kill.killTime))
-            row.xpPerSecond:SetText(U.XPPerSecond(kill.xp, kill.killTime))
+            row.killTime:SetText(U.KillTime(kill.killTime, kill.killTimeEstimated))
+            row.xpPerSecond:SetText(U.XPPerSecond(kill.xp, kill.killTime, kill.killTimeEstimated))
             row.respawn:SetText(U.RespawnTime(A.Mobs.RespawnAverage(kill.name)))
         end
     end

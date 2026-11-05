@@ -507,12 +507,13 @@ class LevelingTests(unittest.TestCase):
         toc = (ADDON / "ElmoLeveling.toc").read_text()
         self.assertIn("## Title: ElmoLeveling", toc)
         self.assertIn("## SavedVariablesPerCharacter: ElmoLevelingDB", toc)
+        self.vm.globals().EXPECTED_VERSION = next(line.split(":", 1)[1].strip() for line in toc.splitlines() if line.startswith("## Version:"))
         self.check("""MOCK.start(); local panels = 0
         for _, frame in ipairs(MOCK.frames) do
             if frame.name == 'ElmoLevelingPanel' then panels = panels + 1 end
             assert(frame.name ~= 'ClassicXPTrackerPanel')
         end
-        assert(panels == 1 and A.version == '1.6.4' and A.UI.panel.height == 195 and A.UI.panel.width == 332)""")
+        assert(panels == 1 and A.version == EXPECTED_VERSION and A.UI.panel.height == 195 and A.UI.panel.width == 332)""")
 
     def test_mob_kill_records_actual_xp_levels_and_one_kill(self):
         self.check("""MOCK.level = 20; MOCK.mob('target','Boar',19); MOCK.start()
@@ -1118,6 +1119,62 @@ class LevelingTests(unittest.TestCase):
         self.check("""MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5}); MOCK.start()
         local _,buttons=MOCK.nativeBag(5,1)
         assert(not buttons[1].ElmoLevelingUpgrade and not buttons[1].ElmoLevelingUpgradeBorder)""")
+
+    def test_forever_betterbags_bag_selector_is_not_an_item_slot(self):
+        self.check("""MOCK.class='PRIEST'; MOCK.betterBags(); MOCK.start()
+        -- BetterBags creates its bag selector with no parent or container ID.
+        local selector=CreateFrame('Button','BetterBagsBagButtonTest',nil,'ItemButtonTemplate')
+        SetItemButtonQuality(selector,2)
+        assert(A.Upgrades.buttons[selector] == nil)
+        -- A previously tracked or detached button must not abort the repaint.
+        A.Upgrades.buttons[selector]={container=nil}
+        MOCK.gear(10,'INVTYPE_RANGEDRIGHT',{}, {subclassID=19,dps=10.4})
+        local wand=MOCK.betterItem('item:10',0)
+        assert(wand.button.ElmoLevelingUpgradeBorder:IsShown())
+        MOCK.equipped[18]='item:10'; MOCK.event('PLAYER_EQUIPMENT_CHANGED',18)
+        MOCK.advance(1)
+        assert(not wand.button.ElmoLevelingUpgradeBorder:IsShown())
+        assert(not wand.button.ElmoLevelingUpgrade)""")
+
+    def test_forever_native_item_losing_its_slot_does_not_break_other_borders(self):
+        self.check("""MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5})
+        MOCK.put(0,1,10,1); MOCK.start()
+        local _,buttons=MOCK.nativeBag(0,1)
+        local b=buttons[1]; assert(b.ElmoLevelingUpgradeBorder:IsShown())
+        b.GetBagID=function() end; b:SetID(0)
+        A.Upgrades.buttons[b]={container=nil}
+        MOCK.bagChange()
+        assert(not b.ElmoLevelingUpgradeBorder:IsShown())""")
+
+    def test_forever_border_updates_when_equipment_settles_after_its_event(self):
+        self.check("""MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=10})
+        MOCK.put(0,1,10,1); MOCK.start()
+        local _,buttons=MOCK.nativeBag(0,1); MOCK.advance(1)
+        local border=buttons[1].ElmoLevelingUpgradeBorder; assert(border:IsShown())
+        MOCK.event('PLAYER_EQUIPMENT_CHANGED',5); MOCK.advance(1)
+        MOCK.equipped[5]='item:20'; MOCK.advance(1)
+        assert(not border:IsShown() and not buttons[1].ElmoLevelingUpgrade)
+        MOCK.equipped[5]=nil; MOCK.advance(1); assert(border:IsShown())""")
+
+    def test_forever_border_updates_when_level_settles_after_level_up(self):
+        self.check("""MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5},{required=2})
+        MOCK.put(0,1,10,1); MOCK.start()
+        local _,buttons=MOCK.nativeBag(0,1); MOCK.advance(1)
+        assert(not buttons[1].ElmoLevelingUpgrade)
+        MOCK.event('PLAYER_LEVEL_UP',2); MOCK.advance(1)
+        MOCK.level=2; MOCK.advance(1)
+        assert(buttons[1].ElmoLevelingUpgradeBorder:IsShown())""")
+
+    def test_forever_betterbags_border_updates_after_delayed_equipment_change(self):
+        self.check("""MOCK.betterBags()
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=10}); MOCK.start()
+        local item=MOCK.betterItem('item:10',0); MOCK.advance(1)
+        local border=item.button.ElmoLevelingUpgradeBorder; assert(border:IsShown())
+        MOCK.event('PLAYER_EQUIPMENT_CHANGED',5); MOCK.advance(1)
+        MOCK.equipped[5]='item:20'; MOCK.advance(1)
+        assert(not border:IsShown() and not item.button.ElmoLevelingUpgrade)""")
 
     def test_missing_usability_api_keeps_uncertain_equipment_unmarked(self):
         self.check("""MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5}); MOCK.start()

@@ -2,9 +2,9 @@
 ## Title: ElmoPlater
 ## Notes: Native-position nameplates with personal debuffs, health percentage and visual priority.
 ## Author: Giuseppe
-## Version: 2.2.4
+## Version: 2.2.5
 ## SavedVariablesPerCharacter: ElmoPlaterDB
-## OptionalDeps: ClassicTarget, Blizzard_AuraContainer
+## OptionalDeps: ClassicTarget, Blizzard_AuraContainer, Questie
 
 Migration.lua
 Core.lua
@@ -12,6 +12,7 @@ Spells.lua
 Conditions.lua
 Rules.lua
 Auras.lua
+QuestLoot.lua
 Plates.lua
 Settings.lua
 Dropdown.lua

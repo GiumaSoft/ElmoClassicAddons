@@ -1,7 +1,7 @@
 from fixture import create_vm
 vm,ns=create_vm()
 vm.execute(r"""
-MOCK.start();assert(A.ready and A.version=='2.2.4')
+MOCK.start();assert(A.ready and A.version=='2.2.5')
 local a,pa=MOCK.mob('nameplate1','Creature-a','Murloc Streamrunner')
 local b,pb=MOCK.mob('nameplate2','Creature-b','Boar');pb.centerX=950
 assert(A.units.nameplate1 and pa.UnitFrame.alpha==0)
