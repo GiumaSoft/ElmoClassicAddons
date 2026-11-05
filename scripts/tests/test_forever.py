@@ -33,7 +33,12 @@ def load_dungeon():
 class ForeverTests(unittest.TestCase):
     def test_all_packages_and_versions(self):
         for client,interface in [('classic',11509),('forever',16001)]:
-            for name,version in [('ElmoLeveling','1.6.4'),('ElmoPlater','2.2.3'),('ElmoDungeonLoot','2.2.0'),('ElmoSpellTracker','1.0.2')]:
+            for source in sorted(ROOT.glob('Elmo*')):
+                manifest=source/(source.name+'.toc')
+                if not manifest.is_file():continue
+                name=source.name
+                version=next(line.split(':',1)[1].strip() for line in manifest.read_text().splitlines()
+                    if line.startswith('## Version:'))
                 path=ROOT/'.build'/client/name
                 toc=(path/(name+'.toc')).read_text()
                 self.assertIn('## Interface: '+str(interface),toc)

@@ -3,6 +3,7 @@
 ## Notes: Find groups for active quests and dungeons in Classic Era and WoW Forever.
 ## Author: Giuseppe
 ## Version: 1.4.0
+## X-Curse-Project-ID: 1785477
 ## SavedVariablesPerCharacter: ElmoLFGDB
 ## OptionalDeps: ClassicQuestLFG, QuestLFG
 

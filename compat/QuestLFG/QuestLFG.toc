@@ -3,6 +3,7 @@
 ## Notes: Data-only settings importer. All interface and recruitment run in ElmoLFG.
 ## Author: Giuseppe
 ## Version: 1.4.0
+## X-Curse-Project-ID: 1785477
 ## LoadOnDemand: 1
 ## SavedVariablesPerCharacter: QuestLFGDB
 ## X-ElmoLFG-Legacy: 1
