@@ -1,4 +1,14 @@
-# ElmoPlater 2.2.3
+# ElmoPlater 2.2.4
+
+## Changes in 2.2.4
+
+- Fixed personal debuff icons disappearing during restricted combat on Forever by using Blizzard aura containers.
+- On the container display, countdowns use numbers only, a 20% larger font, and appear above the icon; stacks remain at the bottom right.
+- Kept the legacy aura display for clients without the container template, including its existing countdown layout.
+- Refreshed aura data on target/nameplate aliases, target changes and combat transitions.
+- Added `/eplater auras` diagnostics that skip direct aura queries while data is restricted.
+
+Restricted aura data remains unavailable to priority rules and debuff learning, even while Blizzard displays the icons.
 
 ## Changes in 2.2.3
 
@@ -17,6 +27,11 @@ Other players' and pet debuffs are excluded. Claimed mobs are grey and marked
 `[CLAIMED]`. Native positioning and targeting remain owned by WoW.
 
 ## Configuration
+
+On clients with Blizzard aura containers, personal debuff icons, timers and stacks
+are drawn by Blizzard even when addons cannot read aura data during combat.
+Those private auras remain unavailable to priority rules and the learned-debuff
+catalogue. `/eplater auras` reports the display mode without querying restricted data.
 
 Open `/eplater` (also `/elmoplater`, `/cplater`, `/classicplater`, `/ctarget`,
 `/classictarget`). Settings are saved per character.

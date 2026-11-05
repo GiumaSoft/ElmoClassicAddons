@@ -26,7 +26,7 @@ local function make(plate)
     f.level = text(f.header, 10); f.level:SetPoint("LEFT", f.name, "RIGHT", 6, 0)
     f.level:SetHeight(14); f.level:SetJustifyH("LEFT"); f.level:SetWordWrap(false)
     f.icons = {}; f:Hide()
-    return {plate = plate, bounds = bounds, frame = f, auras = {}}
+    return {plate = plate, bounds = bounds, frame = f, auras = {}, auraContainer = A.Auras.Create(f)}
 end
 
 local function nativePoints(native)
@@ -60,6 +60,7 @@ local function bindClicks(record)
 end
 
 local function restore(record)
+    if record.auraContainer then record.auraContainer:SetEnabled(false); record.auraContainer:Hide() end
     record.frame:Hide()
     local native = record.native
     if native and A.Call(native.GetParent, native) == record.plate then
@@ -107,16 +108,36 @@ function A.Add(unit)
     end
     if record.guid ~= guid then record.auras, record.aurasKnown = {}, false end
     record.unit, record.guid = unit, guid; A.units[unit] = record
+    if record.auraContainer then
+        record.auraContainer:SetUnit(unit); record.auraContainer:SetEnabled(true); record.auraContainer:Show()
+    end
     native:SetAlpha(0)
     A.Update(true, unit)
 end
 
 local function scan(record)
-    local auras = {}
+    if A.Auras.Restricted() then
+        -- The container draws restricted auras. Rule logic must not query them.
+        record.auras, record.aurasKnown = {}, false
+        return
+    end
+    local auras, batch = {}, nil
     record.aurasKnown = true
+    if C_UnitAuras and C_UnitAuras.GetUnitAuras then
+        -- Forever's native nameplates use this API. Indexed aura queries can
+        -- be unavailable even when the batch supplies drawable display fields.
+        local ok
+        ok, batch = pcall(C_UnitAuras.GetUnitAuras, record.unit, "HARMFUL|PLAYER", 255)
+        if not ok or A.Secret(batch) or type(batch) ~= "table" or
+            (type(canaccesstable) == "function" and not canaccesstable(batch)) then
+            record.auras, record.aurasKnown = {}, false
+            return
+        end
+    end
     for i = 1, 255 do
         local data
-        if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+        if batch then data = batch[i]
+        elseif C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
             local ok
             ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, record.unit, i, "HARMFUL|PLAYER")
             if not ok then record.aurasKnown = false; break end
@@ -127,12 +148,18 @@ local function scan(record)
         end
         if A.Secret(data) then record.aurasKnown = false; break end
         if type(data) ~= "table" then break end
+        if type(canaccesstable) == "function" and not canaccesstable(data) then record.aurasKnown = false; break end
         local source, expires = A.Text(data.sourceUnit), A.Number(data.expirationTime) or 0
         if A.Secret(data.sourceUnit) or A.Secret(data.spellId) then record.aurasKnown = false end
-        if source and (source == "player" or A.Bool(A.Call(UnitIsUnit, source, "player")) == true) and
+        -- HARMFUL|PLAYER already filters ownership when the caster is withheld.
+        if (not source or source == "player" or A.Bool(A.Call(UnitIsUnit, source, "player")) == true) and
             (expires == 0 or expires > GetTime()) then
+            local texture = data.icon
+            if not A.Secret(texture) then
+                texture = A.Number(texture) or A.Text(texture) or "Interface\\Icons\\INV_Misc_QuestionMark"
+            end
             A.Rules.Observe(data.spellId, data.name, data.icon)
-            auras[#auras + 1] = {name = A.Text(data.name), id = A.Number(data.spellId), icon = A.Number(data.icon),
+            auras[#auras + 1] = {name = A.Text(data.name), id = A.Number(data.spellId), icon = texture,
                 expires = expires, count = A.Number(data.applications) or 0}
         end
     end
@@ -249,14 +276,16 @@ local function render(record, now)
     for i = #record.auras, 1, -1 do
         if record.auras[i].expires > 0 and record.auras[i].expires <= now then table.remove(record.auras, i) end
     end
-    local size, count = A.db.plateAuraSize, #record.auras
-    for i, aura in ipairs(record.auras) do
+    A.Auras.Update(record)
+    local size, count = A.db.plateAuraSize, record.auraContainer and 0 or #record.auras
+    for i = 1, count do
+        local aura = record.auras[i]
         local child = icon(record, i); child:SetSize(size, size); child:ClearAllPoints()
         local columns = math.min(6, count)
         local rowCount = math.min(columns, count - math.floor((i - 1) / columns) * columns)
         child:SetPoint("BOTTOM", f, "TOP", ((i - 1) % columns - (rowCount - 1) / 2) * (size + 2),
             20 + math.floor((i - 1) / columns) * (size + 2))
-        child.texture:SetTexture(aura.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+        child.texture:SetTexture(aura.icon)
         child.timer:SetText(aura.expires > 0 and math.ceil(aura.expires - now) or "")
         child.count:SetText(aura.count > 1 and aura.count or ""); child:Show()
     end
@@ -269,7 +298,8 @@ function A.Update(refreshAuras, changedUnit)
     local list, now = {}, GetTime()
     A.privateHealthActive = false
     for _, record in pairs(A.units) do
-        if refreshAuras and (not changedUnit or changedUnit == record.unit) and
+        if refreshAuras and (not changedUnit or changedUnit == record.unit or
+            A.Bool(A.Call(UnitIsUnit, changedUnit, record.unit)) == true) and
             record.unit and A.Text(A.Call(UnitGUID, record.unit)) == record.guid then scan(record) end
         if render(record, now) then
             list[#list + 1] = record
@@ -284,6 +314,7 @@ function A.Update(refreshAuras, changedUnit)
         if priority then level = 30 + #list * 8 end
         record.frame:SetFrameLevel(level); record.frame.bar:SetFrameLevel(level + 1)
         record.frame.header:SetFrameLevel(level + 2)
+        if record.auraContainer then record.auraContainer:SetFrameLevel(level + 2) end
         for _, child in ipairs(record.frame.icons) do child:SetFrameLevel(level + 2) end
         record.priority = priority
         -- Measure only our UIParent-based bounds. Bound click points follow this owned rectangle.

@@ -155,6 +155,16 @@ class ForeverTests(unittest.TestCase):
         with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
             runpy.run_path(str(HERE/'ElmoPlater/test_secret_health.py'))
 
+    def test_forever_displays_personal_auras_with_protected_fields(self):
+        sys.path.insert(0,str(HERE/'ElmoPlater'))
+        with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
+            runpy.run_path(str(HERE/'ElmoPlater/test_secret_auras.py'))
+
+    def test_forever_delegates_restricted_auras_to_blizzard(self):
+        sys.path.insert(0,str(HERE/'ElmoPlater'))
+        with patch.dict(os.environ,{'ELMO_TEST_ADDON':str(STAGE/'ElmoPlater'),'ELMO_TEST_FOREVER':'1'}):
+            runpy.run_path(str(HERE/'ElmoPlater/test_aura_containers.py'))
+
     def test_forever_cooldowns_and_secret_values(self):
         vm=LuaRuntime(unpack_returned_tuples=True)
         vm.execute((HERE/'ElmoSpellTracker/wow_mock.lua').read_text())

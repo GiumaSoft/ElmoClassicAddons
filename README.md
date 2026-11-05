@@ -5,7 +5,7 @@ One source project for the locally maintained Elmo addon family. Interface and m
 | Addon | Release | Clients |
 | --- | --- | --- |
 | ElmoLeveling | 1.6.4 | Classic Era 11509, Forever 16001 |
-| ElmoPlater | 2.2.3 | Classic Era 11509, Forever 16001 |
+| ElmoPlater | 2.2.4 | Classic Era 11509, Forever 16001 |
 | ElmoDungeonLoot | 2.2.0 | Classic Era 11509, Forever 16001 |
 | ElmoSpellTracker | 1.0.2 | Classic Era 11509, Forever 16001 |
 

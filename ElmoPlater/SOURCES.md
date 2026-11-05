@@ -27,11 +27,23 @@ calling the restricted getter. Native containing bounds and click overlap remain
 engine-controlled. Personal debuff icons are above the bar, outside the click
 rectangle. The separate priority anchor has been removed.
 
-C_UnitAuras.GetAuraDataByIndex uses HARMFUL|PLAYER plus a player-source check,
-with UnitDebuff fallback. Aura scans and public combat logs populate a per-character
+Where supported, CustomAuraContainerTemplate displays HARMFUL|PLAYER above each
+owned bar. Its initialization callback registers icon, duration text and stack
+text with Blizzard; subsequent updates never inspect or modify adopted buttons.
+Only the public container is bound to a nameplate token, scaled and layered.
+It is disabled when the nameplate is removed. API reference (Forever build 70790):
+https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_AuraContainer/Blizzard_CustomAuraContainer.lua
+https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_AuraContainer/Blizzard_CustomAuraButton.lua
+
+C_Secrets.ShouldAurasBeSecret gates all direct aura reads, including diagnostics.
+While restricted, aurasKnown=false prevents the rule engine from inferring missing
+debuffs; Blizzard continues updating the display. Outside restrictions,
+C_UnitAuras.GetUnitAuras uses HARMFUL|PLAYER, with indexed and UnitDebuff fallbacks
+on older clients. Readable aura scans and public combat logs populate a per-character
 observed-debuff catalog. Damage, misses and personal harmful auras mark engaged
 mobs. GUIDs identify records only. The 0.1-second tick updates priority and expiry;
-aura events scan the changed unit. Debuff rules require public usability/resource and
+aura events scan the changed unit, including aliases such as target/nameplate2.
+Combat transitions refresh aura readability. Debuff rules require public usability/resource and
 cooldown data. GetSpellCooldownDuration(..., true) ignores GCD; the numeric fallback
 compares the spell cooldown with spell 61304's GCD. Charges are checked separately.
 Unknown data fails closed rather than fabricating a usable spell or missing aura.

@@ -1,7 +1,7 @@
 local addonName, A = ...
 ElmoPlater = A
 ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units, A.attacked = "2.2.3", {}, {}, {}
+A.version, A.records, A.units, A.attacked = "2.2.4", {}, {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -90,6 +90,53 @@ function A.Scan()
     end
 end
 
+function A.AuraStatus()
+    local lines = {}
+    local function report(line) lines[#lines + 1] = line; A.Print(line) end
+    local function describe(value)
+        if A.Secret(value) then return "private" end
+        if type(value) ~= "table" then return type(value) end
+        return "table (icon=" .. (A.Secret(value.icon) and "private" or type(value.icon)) ..
+            ", caster=" .. (A.Secret(value.sourceUnit) and "private" or A.Text(value.sourceUnit) or "nil") ..
+            ", spell=" .. (A.Secret(value.spellId) and "private" or tostring(A.Number(value.spellId))) .. ")"
+    end
+    report("Last UNIT_AURA: " .. (A.lastAuraUnit or "none"))
+    report("Aura display: " .. (A.Auras.available and "Blizzard container" or "legacy icons"))
+    local units = {"target"}
+    for unit, record in pairs(A.units) do
+        local shown = 0
+        for _, child in ipairs(record.frame.icons) do if child:IsShown() then shown = shown + 1 end end
+        report(unit .. ": stored=" .. #record.auras .. ", known=" .. tostring(record.aurasKnown) ..
+            ", icons=" .. shown .. ", visible=" .. tostring(record.frame:IsShown()) ..
+            ", container=" .. tostring(record.auraContainer ~= nil))
+        if A.Bool(A.Call(UnitIsUnit, unit, "target")) == true then units[#units + 1] = unit end
+    end
+    if A.Auras.Restricted() then
+        report("Aura data restricted: display is managed by Blizzard; direct queries skipped.")
+        A.db.auraDiagnostic = lines
+        return
+    end
+    for _, unit in ipairs(units) do
+        for _, filter in ipairs({"HARMFUL|PLAYER", "HARMFUL"}) do
+            local indexed = "unavailable"
+            if C_UnitAuras and C_UnitAuras.GetAuraDataByIndex then
+                local ok, data = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, filter)
+                indexed = ok and describe(data) or "error: " .. (A.Text(data) or "private")
+            end
+            local batch = "unavailable"
+            if C_UnitAuras and C_UnitAuras.GetUnitAuras then
+                local ok, data = pcall(C_UnitAuras.GetUnitAuras, unit, filter, 255)
+                if not ok then batch = "error: " .. (A.Text(data) or "private")
+                elseif A.Secret(data) then batch = "private"
+                elseif type(data) == "table" then batch = #data .. "; first=" .. describe(data[1])
+                else batch = type(data) end
+            end
+            report(unit .. " " .. filter .. ": indexed=" .. indexed .. "; batch=" .. batch)
+        end
+    end
+    A.db.auraDiagnostic = lines
+end
+
 function A.CombatLog(...)
     local _, event, _, source, _, _, _, dest = ...
     event, source, dest = A.Text(event), A.Text(source), A.Text(dest)
@@ -113,6 +160,8 @@ function A.Command(msg)
     command = command:lower()
     if command == "" or command == "config" or command == "settings" then
         A.Settings.Toggle()
+    elseif command == "auras" then
+        A.AuraStatus()
     elseif command == "status" then
         local visible, custom, private = 0, 0, 0
         for _, record in pairs(A.units) do
@@ -163,6 +212,7 @@ function A.Initialize()
     A.db.watchDebuff = type(A.db.watchDebuff) == "string" and A.db.watchDebuff or ""
     A.db.plateAuraSize = math.max(14, math.min(36, A.Number(A.db.plateAuraSize) or 22))
     A.Rules.Initialize()
+    A.Auras.Initialize()
     A.ready = A.Recover()
     if not A.ready then return end
     A.RegisterCombatLog()
@@ -180,7 +230,7 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
     if event == "ADDON_LOADED" then
         if unit == addonName and IsLoggedIn() then A.Initialize() end
     elseif event == "PLAYER_LOGIN" then A.Initialize()
-    elseif event == "PLAYER_REGEN_ENABLED" then A.attacked = {}; A.Initialize(); A.Update(false)
+    elseif event == "PLAYER_REGEN_ENABLED" then A.attacked = {}; A.Initialize(); A.Update(true)
     elseif A.ready then
         if event == "NAME_PLATE_UNIT_ADDED" then A.Add(unit)
         elseif event == "NAME_PLATE_UNIT_REMOVED" then A.Remove(unit)
@@ -192,11 +242,13 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
             if A.Text(unit) and unit:lower():match("^nameplate") then
                 for _, record in pairs(A.units) do record.clickBound, record.clickFailed = false, false end
             end
-        elseif event == "UNIT_AURA" then A.Update(true, unit)
+        elseif event == "UNIT_AURA" then A.lastAuraUnit = A.Text(unit); A.Update(true, unit)
+        elseif event == "PLAYER_TARGET_CHANGED" then A.Update(true, "target")
+        elseif event == "PLAYER_REGEN_DISABLED" then A.Update(true)
         else A.Update(false) end
     end
 end)
-for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "NAME_PLATE_UNIT_ADDED",
+for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "NAME_PLATE_UNIT_ADDED",
     "NAME_PLATE_UNIT_REMOVED", "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_FACTION", "UNIT_FLAGS",
     "PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT",
     "CVAR_UPDATE"}) do
