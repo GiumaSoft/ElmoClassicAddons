@@ -1,0 +1,10 @@
+## Interface: 16001
+## Title: ElmoLFG - Legacy settings (QuestLFG)
+## Notes: Data-only settings importer. All interface and recruitment run in ElmoLFG.
+## Author: Giuseppe
+## Version: 1.4.0
+## LoadOnDemand: 1
+## SavedVariablesPerCharacter: QuestLFGDB
+## X-ElmoLFG-Legacy: 1
+
+Legacy.lua

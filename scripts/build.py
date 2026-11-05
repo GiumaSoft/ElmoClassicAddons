@@ -52,13 +52,26 @@ def build(source, client):
                 raise FileNotFoundError(f"{name}: missing TOC resource {line}")
     archive = ROOT / "dist" / f"{name}-{version}-{client}.zip"
     archive.parent.mkdir(exist_ok=True)
-    files = sorted(file for file in stage.rglob("*") if file.is_file())
+    roots = [stage]
+    if name == "ElmoLFG":
+        # Replacing the old manifests with data-only loaders preserves saved
+        # settings without starting the old recruitment UI alongside ElmoLFG.
+        for legacy in ("ClassicQuestLFG", "QuestLFG"):
+            loader = stage.parent / legacy
+            if loader.exists():
+                shutil.rmtree(loader)
+            shutil.copytree(ROOT / "compat" / legacy, loader)
+            manifest = loader / (legacy + ".toc")
+            manifest.write_text(re.sub(r"^## Interface:.*$", f"## Interface: {INTERFACES[client]}",
+                manifest.read_text(), flags=re.MULTILINE))
+            roots.append(loader)
+    files = sorted(file for folder in roots for file in folder.rglob("*") if file.is_file())
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in files:
-            package.write(file, name + "/" + file.relative_to(stage).as_posix())
+            package.write(file, file.relative_to(stage.parent).as_posix())
     with zipfile.ZipFile(archive) as package:
         for file in files:
-            if package.read(name + "/" + file.relative_to(stage).as_posix()) != file.read_bytes():
+            if package.read(file.relative_to(stage.parent).as_posix()) != file.read_bytes():
                 raise RuntimeError(f"Archive verification failed: {file}")
     print(f"{name} {version} {client}")
     return {
