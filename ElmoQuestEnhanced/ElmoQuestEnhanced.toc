@@ -1,7 +1,8 @@
 ## Interface: 16001
-## Title: ElmoQuestReport
+## Title: ElmoQuestEnhanced
 ## Notes: Report completed quests and objectives to your group.
 ## Author: Giuseppe
-## Version: 1.0.0
+## Version: 1.1.0
+## X-Curse-Project-ID: 1785450
 
 Core.lua

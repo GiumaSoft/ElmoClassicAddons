@@ -1,5 +1,5 @@
 local _, A = ...
-ElmoQuestReport = A
+ElmoQuestEnhanced = A
 local states, legacyLog, legacySignature = {}, nil, nil
 local accepted = {}
 local frame, elapsed, scanning = CreateFrame("Frame"), 0, false
@@ -137,14 +137,14 @@ local function update(id, quest)
             local previous = state.objectives[i] or {incomplete = not row.done, reported = row.done}
             if not row.done then previous.incomplete = true end
             if state.count > 1 and row.done and previous.incomplete and not previous.reported then
-                previous.reported = announce("[ElmoQuestReport] Objective complete: " .. row.text .. " (" .. quest.title .. ")")
+                previous.reported = announce("[ElmoQuestEnhanced] Objective complete: " .. row.text .. " (" .. quest.title .. ")")
             end
             state.objectives[i] = previous
         end
     end
     if not quest.complete then state.incomplete = true end
     if quest.complete and state.incomplete and not state.reported then
-        state.reported = announce("[ElmoQuestReport] Quest complete: " .. quest.title)
+        state.reported = announce("[ElmoQuestEnhanced] Quest complete: " .. quest.title)
     end
 end
 

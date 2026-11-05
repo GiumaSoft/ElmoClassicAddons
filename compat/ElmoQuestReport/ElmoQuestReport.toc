@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: ElmoQuestEnhanced - Legacy compatibility (ElmoQuestReport)
+## Notes: Inactive compatibility stub. Quest reporting is provided by ElmoQuestEnhanced.
+## Author: Giuseppe
+## Version: 1.1.0
+## X-Curse-Project-ID: 1785450
+## LoadOnDemand: 1
+
+Legacy.lua

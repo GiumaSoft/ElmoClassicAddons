@@ -34,7 +34,7 @@ box(98, 177, 204, 151, background, 10)
 line([NSPoint(x: 144, y: 171), NSPoint(x: 122, y: 135), NSPoint(x: 193, y: 171)], gold, 10)
 line([NSPoint(x: 139, y: 256), NSPoint(x: 181, y: 216), NSPoint(x: 263, y: 293)], pale, 17)
 label("ELMO", 72, 42, gold)
-label("QUEST REPORT", 43, 15, pale)
+label("QUEST ENHANCED", 43, 15, pale)
 image.unlockFocus()
 let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
 try bitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: CommandLine.arguments[1]))

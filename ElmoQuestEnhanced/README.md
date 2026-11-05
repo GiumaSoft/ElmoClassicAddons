@@ -1,4 +1,4 @@
-# ElmoQuestReport 1.0.0
+# ElmoQuestEnhanced 1.1.0
 
 Reports only your quest completions to your current group:
 
@@ -17,8 +17,10 @@ can report its completion. Missing/private data is retried rather than inferred
 from counters alone. Messages are English; names and objective wording come
 from the client's quest log. Text stays within the 255-byte chat limit.
 
-Install the package for your client in `Interface/AddOns/ElmoQuestReport` and
-restart the client to discover the new addon. Enable it in the AddOns list.
+Renamed from ElmoQuestReport. Extract both folders from the package into
+`Interface/AddOns` and restart WoW. Enable ElmoQuestEnhanced in the AddOns list.
+The bundled ElmoQuestReport folder is now an inactive compatibility stub, so
+only the new addon reports completions. There are no saved settings to migrate.
 If Questie's own announcements are enabled, disable those options to avoid
 receiving the same completion from both addons. Questie settings are not changed.
 
@@ -34,5 +36,5 @@ References: [Questie's announcements](https://github.com/Questie/Questie/blob/ma
 This is an independent implementation; no Questie code or assets are bundled.
 
 Validation uses Lua 5.1 with simulated APIs in
-`scripts/tests/ElmoQuestReport/test_addon.py`. No live group messages are sent by
+`scripts/tests/ElmoQuestEnhanced/test_addon.py`. No live group messages are sent by
 the tests. In-game confirmation remains separate from these checks.

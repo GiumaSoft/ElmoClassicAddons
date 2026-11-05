@@ -1,0 +1,1 @@
+-- Compatibility stub for the rename. No quest reports, frames, events or timers.

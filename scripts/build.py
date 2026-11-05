@@ -17,6 +17,10 @@ LEGACY_DEPENDENCIES = {
     "ElmoPlater": {"classic": ["ClassicPlater", "ClassicTarget"]},
     "ElmoSpellTracker": {"classic": ["ClassicSpellsTracker", "ClassicCooldownTracker"]},
 }
+COMPATIBILITY_FOLDERS = {
+    "ElmoLFG": ("ClassicQuestLFG", "QuestLFG"),
+    "ElmoQuestEnhanced": ("ElmoQuestReport",),
+}
 
 
 def build(source, client):
@@ -53,10 +57,10 @@ def build(source, client):
     archive = ROOT / "dist" / f"{name}-{version}-{client}.zip"
     archive.parent.mkdir(exist_ok=True)
     roots = [stage]
-    if name == "ElmoLFG":
-        # Replacing the old manifests with data-only loaders preserves saved
-        # settings without starting the old recruitment UI alongside ElmoLFG.
-        for legacy in ("ClassicQuestLFG", "QuestLFG"):
+    if name in COMPATIBILITY_FOLDERS:
+        # Old manifests become inert stubs/loaders, preventing duplicate UIs
+        # or quest reports while retaining any legacy saved settings.
+        for legacy in COMPATIBILITY_FOLDERS[name]:
             loader = stage.parent / legacy
             if loader.exists():
                 shutil.rmtree(loader)

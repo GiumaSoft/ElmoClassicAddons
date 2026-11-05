@@ -5,7 +5,7 @@ import unittest
 from lupa.lua51 import LuaRuntime
 
 ROOT = Path(__file__).resolve().parents[3]
-ADDON = Path(os.environ.get('ELMO_TEST_ADDON', ROOT / 'ElmoQuestReport'))
+ADDON = Path(os.environ.get('ELMO_TEST_ADDON', ROOT / 'ElmoQuestEnhanced'))
 STUB = r'''
 frames,sent,quests,log={},{},{},{}
 group='PARTY';LE_PARTY_CATEGORY_INSTANCE=2;selection=2;expanded=0;restored=0
@@ -82,7 +82,7 @@ class Scenarios:
         else:
             self.vm.execute('C_QuestLog.GetInfo=nil;C_QuestLog.IsComplete=nil')
         self.vm.execute('A={}')
-        self.vm.execute((ADDON / 'Core.lua').read_text(), 'ElmoQuestReport', self.vm.globals().A)
+        self.vm.execute((ADDON / 'Core.lua').read_text(), 'ElmoQuestEnhanced', self.vm.globals().A)
         self.vm.execute("add(100,'Test quest',1);fire('PLAYER_LOGIN');tick()")
 
     def check(self, code):
@@ -90,7 +90,7 @@ class Scenarios:
 
     def test_single_objective_reports_only_the_quest(self):
         self.check('''finish(100,1);quests[100].complete=true;update()
-        assert(#sent==1 and sent[1].message=='[ElmoQuestReport] Quest complete: Test quest')
+        assert(#sent==1 and sent[1].message=='[ElmoQuestEnhanced] Quest complete: Test quest')
         assert(sent[1].channel=='PARTY')''')
 
     def test_multi_objectives_then_whole_quest_once(self):
@@ -98,7 +98,7 @@ class Scenarios:
         finish(101,1);update();assert(#sent==1 and sent[1].message:find('Objective 1: 2/2',1,true))
         finish(101,2);quests[101].complete=true;update()
         assert(#sent==3 and sent[2].message:find('Objective 2: 2/2',1,true))
-        assert(sent[3].message=='[ElmoQuestReport] Quest complete: Multiple')
+        assert(sent[3].message=='[ElmoQuestEnhanced] Quest complete: Multiple')
         for i=1,10 do update();fire('QUEST_WATCH_UPDATE',101);tick()end
         assert(#sent==3)''')
 
@@ -189,7 +189,16 @@ class Scenarios:
         self.assertLessEqual(len(message.encode('utf-8')), 255)
 
     def test_only_one_event_frame_and_no_settings_or_dependencies(self):
-        self.check('assert(#frames==1 and ElmoQuestReport==A and SlashCmdList==nil and ElmoQuestReportDB==nil and Questie==nil)')
+        self.check('assert(#frames==1 and ElmoQuestEnhanced==A and SlashCmdList==nil and ElmoQuestEnhancedDB==nil and Questie==nil)')
+
+    def test_old_folder_compatibility_stub_cannot_send_duplicate_reports(self):
+        stub = ADDON.parent / 'ElmoQuestReport/Legacy.lua'
+        if not stub.is_file():
+            stub = ROOT / 'compat/ElmoQuestReport/Legacy.lua'
+        self.vm.execute(stub.read_text(), 'ElmoQuestReport', self.vm.table())
+        self.check('''assert(#frames==1 and ElmoQuestEnhanced==A and ElmoQuestReport==nil)
+        finish(100,1);quests[100].complete=true;update();tick()
+        assert(#sent==1 and sent[1].message=='[ElmoQuestEnhanced] Quest complete: Test quest')''')
 
 
 class ForeverTests(Scenarios, unittest.TestCase):
