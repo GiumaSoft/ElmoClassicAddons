@@ -2,6 +2,7 @@
 ## Title: ElmoBuff
 ## Notes: Click missing-buff icons beside party portraits to rebuff that member.
 ## Author: Giuseppe
+## X-Curse-Project-ID: 1796537
 ## Version: 1.0.1
 ## IconTexture: Interface\Icons\Spell_Holy_WordFortitude
 ## SavedVariablesPerCharacter: ElmoBuffDB

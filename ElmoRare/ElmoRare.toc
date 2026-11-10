@@ -2,6 +2,7 @@
 ## Title: ElmoRare
 ## Notes: Nearby rare alerts from nameplates, target and mouseover, with sound and tooltip.
 ## Author: Giuseppe
+## X-Curse-Project-ID: 1796539
 ## Version: 1.0.0
 ## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
 ## SavedVariablesPerCharacter: ElmoRareDB
