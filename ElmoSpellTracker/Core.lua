@@ -42,7 +42,7 @@ function A.AddSpell(id,info,order)
         if #spells>A.db.maxSkills or order>=(A.orders[last] or 0) then
             if not A.fullNotices[id] then
                 A.fullNotices[id]=true
-                A.Print("Bar full. "..(A.db.maxSkills<A.HARD_LIMIT and "Use /cst max 12, or " or "")..
+                A.Print("Bar full. "..(A.db.maxSkills<A.HARD_LIMIT and "Use /est max 12, or " or "")..
                     "Shift-right-click an icon while unlocked to free a slot.")
             end
             return false
@@ -125,20 +125,18 @@ function A.Command(command)
     elseif name=="unlock" then A.SetLocked(false)
     elseif name=="reset" then A.Clear();A.Print("Tracked abilities cleared. They will be added again when used.")
     elseif name=="remove" then
-        if not A.Remove(value) then A.Print("Use /cst remove <icon number>.") end
+        if not A.Remove(value) then A.Print("Use /est remove <icon number>.") end
     elseif name=="help" then
-        A.Print("/cst: settings · /cst max 1–12 · /cst lock · /cst unlock · /cst remove <number> · /cst reset")
+        A.Print("/est: settings · /est max 1–12 · /est lock · /est unlock · /est remove <number> · /est reset")
     elseif name=="" then A.UI.Settings()
-    else A.Print("Unknown command. /cst help") end
+    else A.Print("Unknown command. /est help") end
 end
 
 function A.Initialize()
-    A.MigrateSettings()
     if A.db then return end
     if type(ElmoSpellTrackerDB)~="table" then
-        ElmoSpellTrackerDB=type(ClassicCooldownTrackerDB)=="table" and ClassicCooldownTrackerDB or {}
+        ElmoSpellTrackerDB={}
     end
-    ClassicCooldownTrackerDB=ElmoSpellTrackerDB
     A.db=ElmoSpellTrackerDB
     local limit=tonumber(A.db.maxSkills)
     A.db.maxSkills=limit and limit%1==0 and limit>=1 and limit<=A.HARD_LIMIT and limit or A.DEFAULT_LIMIT
@@ -159,11 +157,6 @@ function A.Initialize()
     end
     A.UI.Create()
     A.UI.RegisterOptions()
-    SLASH_CLASSICSPELLSTRACKER1="/cst"
-    SLASH_CLASSICSPELLSTRACKER2="/classicspellstracker"
-    SLASH_CLASSICSPELLSTRACKER3="/cct"
-    SLASH_CLASSICSPELLSTRACKER4="/classiccooldowntracker"
-    SlashCmdList.CLASSICSPELLSTRACKER=A.Command
     SLASH_ELMOSPELLTRACKER1="/elmospelltracker"; SLASH_ELMOSPELLTRACKER2="/est"
     SlashCmdList.ELMOSPELLTRACKER=A.Command
     A.Refresh()

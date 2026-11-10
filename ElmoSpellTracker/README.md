@@ -1,4 +1,4 @@
-# ElmoSpellTracker 1.0.3
+# ElmoSpellTracker 1.0.4
 
 ## Options menu
 
@@ -42,16 +42,16 @@ Restart the selected WoW client after installing this new addon, enable **ElmoSp
 in the AddOns list, then enter the world.
 
 ```
-/cst                   Open settings
-/cst max 10            Set capacity (1–12)
-/cst lock              Hide the drag handle and prevent mouse removal
-/cst unlock            Show the drag handle
-/cst remove 3          Remove the third saved ability
-/cst reset             Clear all tracked abilities; learn again when used
-/cst help              Show commands
+/est                   Open settings
+/est max 10            Set capacity (1–12)
+/est lock              Hide the drag handle and prevent mouse removal
+/est unlock            Show the drag handle
+/est remove 3          Remove the third saved ability
+/est reset             Clear all tracked abilities; learn again when used
+/est help              Show commands
 ```
 
-`/classicspellstracker`, `/cct` and `/classiccooldowntracker` are aliases. Settings also provide a numeric capacity
+Settings also provide a numeric capacity
 input and Apply, Lock/Unlock and Clear tracked skills buttons.
 
 Drag the small handle on the **left** to move the bar. Right-click an icon to open
@@ -61,13 +61,14 @@ Locking the bar hides the handle; tracked icons continue to work.
 
 The bar only displays information: its icons do not cast spells or send messages.
 
-## Upgrade from ClassicCooldownTracker
+## Installation
 
-The legacy folder now contains only a data importer. It loads the previous per-character settings before ElmoSpellTracker initializes, preserving the spell list, limit, lock and position. Keep the importer enabled until the first successful login with ElmoSpellTracker. New settings are saved as ElmoSpellTrackerDB.
+Extract the single ElmoSpellTracker folder into Interface/AddOns. Current
+ElmoSpellTrackerDB settings are preserved. Old addon importers are retired.
 
 ## Validation
 
-`tools/classicspellstracker/test_addon.py` runs the actual addon in Lua 5.1 against
+`scripts/tests/ElmoSpellTracker/test_addon.py` runs the actual addon in Lua 5.1 against
 explicit simulated Era spell APIs and frame widgets. The checks cover cooldown
 discovery, delayed data, GCD exclusion, ranks, first-use ordering, grey/ready states,
 resets, charge availability, native duration objects, legacy fallbacks, capacity,
@@ -77,14 +78,11 @@ live-client visual/interaction test.
 From the Era workspace, using Python with `lupa.lua51`:
 
 ```
-python tools/classicspellstracker/test_addon.py
+python scripts/tests/ElmoSpellTracker/test_addon.py
 ```
 
 Pinned API references and the implementation boundaries are in `SOURCES.md`.
 
-## Elmo migration
-
-Settings are imported from ClassicSpellsTracker, ClassicCooldownTracker. Legacy settings import remains supported when previous data is available. Restart WoW after installing the new folder. Release version is unchanged.
 
 ## Client packages
 

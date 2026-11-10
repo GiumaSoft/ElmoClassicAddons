@@ -313,12 +313,9 @@ class Scenarios:
         progress(100,1,2);update();failSend=false;tick();tick()
         assert(#sent==1 and sent[1].message:find('2/5 (3 remaining)',1,true))''')
 
-    def test_old_folder_compatibility_stub_cannot_send_duplicate_reports(self):
-        stub = ADDON.parent / 'ElmoQuestReport/Legacy.lua'
-        if not stub.is_file():
-            stub = ROOT / 'compat/ElmoQuestReport/Legacy.lua'
-        self.vm.execute(stub.read_text(), 'ElmoQuestReport', self.vm.table())
-        self.check('''assert(#frames==1 and ElmoQuestEnhanced==A and ElmoQuestReport==nil)
+    def test_repeated_current_addon_initialization_cannot_send_duplicate_reports(self):
+        self.check('''fire('ADDON_LOADED','ElmoQuestEnhanced')
+        assert(#frames==1 and ElmoQuestEnhanced==A and ElmoQuestReport==nil)
         finish(100,1);quests[100].complete=true;update();tick()
         assert(#sent==1 and sent[1].message=='[ElmoQuestEnhanced] Quest complete: Test quest')''')
 

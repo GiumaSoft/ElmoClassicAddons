@@ -22,8 +22,8 @@ class CooldownTests(unittest.TestCase):
     def test_default_and_registration(self):
         self.check("""MOCK.start();assert(A.db.maxSkills==10 and #A.db.spells==0)
         assert(A.frame.events.UNIT_SPELLCAST_SUCCEEDED=='player')
-        assert(SlashCmdList.CLASSICSPELLSTRACKER==A.Command)
-        assert(SLASH_CLASSICSPELLSTRACKER1=='/cst')""")
+        assert(SlashCmdList.ELMOSPELLTRACKER==A.Command)
+        assert(SLASH_ELMOSPELLTRACKER2=='/est' and SlashCmdList.CLASSICSPELLSTRACKER==nil)""")
 
     def test_first_cast_grey_icon_with_centered_timer(self):
         self.check("""MOCK.spell(100,'Arcane Shot');MOCK.start();MOCK.cooldown(100,6);MOCK.cast(100);MOCK.advance(.1)
@@ -252,18 +252,16 @@ class CooldownTests(unittest.TestCase):
         s.insufficientPower=false;MOCK.event('UNIT_DISPLAYPOWER','player');MOCK.advance(.2)
         assert(not A.UI.icons[1].texture.desaturated)""")
 
-    def test_legacy_settings_import_without_duplicate_bar(self):
+    def test_current_profile_is_preserved_and_old_settings_are_not_imported(self):
         self.check("""MOCK.spell(100)
-        ClassicCooldownTrackerDB={spells={100},maxSkills=4,position={x=75,y=-90},locked=true}
+        ClassicCooldownTrackerDB={spells={100},maxSkills=2}
+        ElmoSpellTrackerDB={spells={100},maxSkills=4,position={x=75,y=-90},locked=true}
+        local current=ElmoSpellTrackerDB;local old=ClassicCooldownTrackerDB
         MOCK.start();MOCK.advance(.2)
-        assert(ElmoSpellTrackerDB==ClassicCooldownTrackerDB and A.db==ElmoSpellTrackerDB)
-        assert(A.db.maxSkills==4 and A.db.spells[1]==100 and A.db.locked)
+        assert(A.db==current and A.db.maxSkills==4 and A.db.spells[1]==100 and A.db.locked)
         assert(A.UI.bar.name=='ElmoSpellTrackerBar' and A.UI.bar.point[4]==75)
-        assert(SLASH_CLASSICSPELLSTRACKER3=='/cct' and ClassicCooldownTracker==ElmoSpellTracker)""")
-
-    def test_new_profile_takes_precedence_over_legacy_profile(self):
-        self.check("""ClassicCooldownTrackerDB={maxSkills=2};ElmoSpellTrackerDB={maxSkills=8}
-        MOCK.start();assert(A.db.maxSkills==8 and ClassicCooldownTrackerDB==A.db)""")
+        assert(ClassicCooldownTrackerDB==old and ClassicCooldownTracker==nil)
+        assert(SLASH_CLASSICSPELLSTRACKER1==nil and SLASH_ELMOSPELLTRACKER2=='/est')""")
 
     def test_only_player_power_events_wake_an_idle_bar(self):
         self.check("""MOCK.start();MOCK.advance(.2)

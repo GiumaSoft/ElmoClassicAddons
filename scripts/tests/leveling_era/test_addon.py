@@ -29,8 +29,8 @@ class LevelingTests(unittest.TestCase):
         assert(A.db.xp == 0 and A.Elapsed() == 0)
         assert(A.UI.minute:GetText() == '0' and A.UI.hour:GetText() == '0')
         assert(A.UI.panel:IsShown() and ElmoLevelingPanel == A.UI.panel)
-        assert(SLASH_CLASSICLEVELING1 == '/clvl' and SlashCmdList.CLASSICLEVELING == A.Command)
-        assert(SLASH_CLASSICLEVELING3 == '/cxp' and SLASH_CLASSICLEVELING4 == '/classicxp')""")
+        assert(SLASH_ELMOLEVELING1 == '/elmoleveling' and SlashCmdList.ELMOLEVELING == A.Command)
+        assert(SLASH_ELMOLEVELING2 == '/elvl' and SlashCmdList.CLASSICLEVELING == nil)""")
 
     def test_exact_rates_after_one_minute(self):
         self.check("""MOCK.start(); MOCK.advance(60); MOCK.gain(120)
@@ -486,44 +486,19 @@ class LevelingTests(unittest.TestCase):
         GetItemInfo = C_Item.GetItemInfo; C_Item = nil; MOCK.start()
         assert(A.Bags.state.value == 150 and A.Bags.state.pending == 0)""")
 
-    def test_first_login_imports_latest_legacy_saved_xp_and_preferences(self):
-        self.check("""MOCK.legacyDB = {xp=120,seconds=20,history={{at=10,xp=120}},
-            locked=true,hidden=true,position={x=54,y=-270}}
-        MOCK.start(); assert(A.migratedLegacy and #MOCK.loadedAddons == 1)
-        assert(MOCK.loadedAddons[1] == 'ClassicXPTracker' and ElmoLevelingDB == A.db)
-        assert(A.db.xp == 120 and A.Elapsed() == 20 and A.db.locked and A.db.hidden)
-        assert(A.db.position.x == 54 and A.db.position.y == -270)
-        local minute,hour = A.RollingXP(); assert(minute == 0 and hour == 0)
-        assert(ElmoLevelingPanel ~= nil and ClassicXPTrackerPanel == nil)""")
 
-    def test_existing_classicleveling_profile_takes_precedence_over_legacy_data(self):
-        self.check("""ElmoLevelingDB = {xp=25,seconds=50}; MOCK.legacyDB = {xp=1000,seconds=100}
+    def test_existing_elmo_profile_ignores_former_addon_data(self):
+        self.check("""ElmoLevelingDB = {xp=25,seconds=50}; ClassicLevelingDB = {xp=1000,seconds=100}
         MOCK.start(); assert(A.db.xp == 25 and A.Elapsed() == 50 and #MOCK.loadedAddons == 0)
         assert(not A.migratedLegacy)""")
 
-    def test_already_loaded_legacy_saved_variables_do_not_load_another_addon(self):
-        self.check("""ClassicXPTrackerDB = {xp=75,seconds=30}; MOCK.start()
-        assert(A.db.xp == 75 and A.Elapsed() == 30 and #MOCK.loadedAddons == 0 and A.migratedLegacy)""")
 
-    def test_missing_or_failed_legacy_loader_does_not_block_fresh_install(self):
-        self.check("""MOCK.legacyError = true; MOCK.start()
+    def test_fresh_install_does_not_load_other_addons(self):
+        self.check("""MOCK.start()
         assert(A.db.xp == 0 and A.Elapsed() == 0 and not A.migratedLegacy)
         assert(A.UI.panel:IsShown() and A.Bags.state.value == 0)""")
 
-    def test_legacy_loadaddon_fallback_can_import_old_saved_variables(self):
-        self.check("""LoadAddOn = C_AddOns.LoadAddOn; C_AddOns = nil
-        MOCK.legacyDB = {xp=90,seconds=30}; MOCK.start()
-        assert(A.db.xp == 90 and A.migratedLegacy and #MOCK.loadedAddons == 1)""")
 
-    def test_legacy_helper_is_data_only_and_declares_the_old_character_variable(self):
-        legacy = Path(__file__).resolve().parents[3] / "scripts/fixtures/ClassicXPTracker"
-        toc = (legacy / "ClassicXPTracker.toc").read_text()
-        self.assertIn("## LoadOnDemand: 1", toc)
-        self.assertIn("## SavedVariablesPerCharacter: ClassicXPTrackerDB", toc)
-        self.assertEqual([s for s in toc.splitlines() if s.endswith(".lua")], ["Legacy.lua"])
-        self.check("BEFORE_LEGACY_FRAMES = #MOCK.frames")
-        self.vm.execute((legacy / "Legacy.lua").read_text())
-        self.check("assert(#MOCK.frames == BEFORE_LEGACY_FRAMES and ClassicXPTrackerPanel == nil)")
 
     def test_renamed_addon_declares_its_own_character_variable_and_one_panel(self):
         toc = (ADDON / "ElmoLeveling.toc").read_text()

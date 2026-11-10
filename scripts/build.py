@@ -8,19 +8,6 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent.parent
 INTERFACES = {"classic": 11509, "forever": 16001}
-# Optional data loaders support existing installations; they are not bundled.
-LEGACY_DEPENDENCIES = {
-    "ElmoLeveling": {
-        "classic": ["ClassicLeveling", "ClassicXPTracker"],
-        "forever": ["ClassicLevelingForever", "ForeverLeveling"],
-    },
-    "ElmoPlater": {"classic": ["ClassicPlater", "ClassicTarget"]},
-    "ElmoSpellTracker": {"classic": ["ClassicSpellsTracker", "ClassicCooldownTracker"]},
-}
-COMPATIBILITY_FOLDERS = {
-    "ElmoQuestEnhanced": ("ElmoQuestReport",),
-}
-
 
 def build(source, client):
     name = source.name
@@ -35,7 +22,6 @@ def build(source, client):
     dependencies = []
     for line in re.findall(r"^## OptionalDeps:\s*(.*)$", text, re.MULTILINE):
         dependencies.extend(value.strip() for value in line.split(",") if value.strip())
-    dependencies.extend(LEGACY_DEPENDENCIES.get(name, {}).get(client, []))
     text = re.sub(r"^## OptionalDeps:.*\n", "", text, flags=re.MULTILINE)
     if dependencies:
         text = "## OptionalDeps: " + ", ".join(dict.fromkeys(dependencies)) + "\n" + text
@@ -48,20 +34,7 @@ def build(source, client):
                 raise FileNotFoundError(f"{name}: missing TOC resource {line}")
     archive = ROOT / "dist" / f"{name}-{version}-{client}.zip"
     archive.parent.mkdir(exist_ok=True)
-    roots = [stage]
-    if name in COMPATIBILITY_FOLDERS:
-        # Old manifests become inert stubs/loaders, preventing duplicate UIs
-        # or quest reports while retaining any legacy saved settings.
-        for legacy in COMPATIBILITY_FOLDERS[name]:
-            loader = stage.parent / legacy
-            if loader.exists():
-                shutil.rmtree(loader)
-            shutil.copytree(ROOT / "compat" / legacy, loader)
-            manifest = loader / (legacy + ".toc")
-            manifest.write_text(re.sub(r"^## Interface:.*$", f"## Interface: {INTERFACES[client]}",
-                manifest.read_text(), flags=re.MULTILINE))
-            roots.append(loader)
-    files = sorted(file for folder in roots for file in folder.rglob("*") if file.is_file())
+    files = sorted(file for file in stage.rglob("*") if file.is_file())
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as package:
         for file in files:
             package.write(file, file.relative_to(stage.parent).as_posix())

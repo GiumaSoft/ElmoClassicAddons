@@ -32,8 +32,8 @@ class LevelingTests(unittest.TestCase):
         assert(A.db.xp == 0 and A.Elapsed() == 0)
         assert(A.UI.minute:GetText() == '0' and A.UI.hour:GetText() == '0')
         assert(A.UI.panel:IsShown() and ElmoLevelingPanel == A.UI.panel)
-        assert(SLASH_CLASSICLEVELINGFOREVER1 == '/clf' and SlashCmdList.CLASSICLEVELINGFOREVER == A.Command)
-        assert(SLASH_CLASSICLEVELINGFOREVER3 == '/flvl' and SLASH_CLASSICLEVELINGFOREVER4 == '/fl')""")
+        assert(SLASH_ELMOLEVELING1 == '/elmoleveling' and SlashCmdList.ELMOLEVELING == A.Command)
+        assert(SLASH_ELMOLEVELING2 == '/elvl' and SlashCmdList.CLASSICLEVELING == nil)""")
 
     def test_exact_rates_after_one_minute(self):
         self.check("""MOCK.start(); MOCK.advance(60); MOCK.gain(120)
@@ -490,14 +490,14 @@ class LevelingTests(unittest.TestCase):
         assert(A.Bags.state.value == 150 and A.Bags.state.pending == 0)""")
 
 
-    def test_existing_foreverleveling_profile_takes_precedence_over_legacy_data(self):
-        self.check("""ElmoLevelingDB = {xp=25,seconds=50}; MOCK.legacyDB = {xp=1000,seconds=100}
+    def test_existing_elmo_profile_ignores_former_addon_data(self):
+        self.check("""ElmoLevelingDB = {xp=25,seconds=50}; ClassicLevelingDB = {xp=1000,seconds=100}
         MOCK.start(); assert(A.db.xp == 25 and A.Elapsed() == 50 and #MOCK.loadedAddons == 0)
         assert(not A.migratedLegacy)""")
 
 
-    def test_missing_or_failed_legacy_loader_does_not_block_fresh_install(self):
-        self.check("""MOCK.legacyError = true; MOCK.start()
+    def test_fresh_install_does_not_load_other_addons(self):
+        self.check("""MOCK.start()
         assert(A.db.xp == 0 and A.Elapsed() == 0 and not A.migratedLegacy)
         assert(A.UI.panel:IsShown() and A.Bags.state.value == 0)""")
 
@@ -1216,7 +1216,7 @@ class LevelingTests(unittest.TestCase):
         MOCK.forever(); MOCK.start()
         assert(ForeverLevelingDB == old and old.settings.enabled == false and old.plan.quest == 123)
         assert(ElmoLevelingDB == A.db and A.db.xp == 0 and A.db ~= old)
-        assert(#MOCK.loadedAddons == 1 and MOCK.loadedAddons[1] == 'ForeverLeveling' and ClassicLevelingDB.xp == 9999)""")
+        assert(#MOCK.loadedAddons == 0 and ClassicLevelingDB.xp == 9999)""")
 
     def test_forever_events_skip_restricted_combat_and_removed_classic_event(self):
         self.check("""MOCK.forever(); MOCK.start()
@@ -1284,20 +1284,7 @@ class LevelingTests(unittest.TestCase):
         for _,line in ipairs(GameTooltip.lines) do if line:find('restricts the combat log',1,true) then found=true end end
         assert(found)""")
 
-    def test_forever_saved_tracker_data_survives_login_without_old_planner_migration(self):
-        self.check("""MOCK.forever(); ElmoLevelingDB={xp=75,seconds=30,history={{at=20,xp=75}}}
-        ForeverLevelingDB={settings={enabled=true}}; MOCK.start()
-        assert(A.db.xp == 75 and A.Elapsed() == 30 and A.db ~= ForeverLevelingDB)
-        MOCK.advance(10); MOCK.event('PLAYER_LOGOUT'); assert(A.db.seconds == 40)""")
 
-    def test_renamed_addon_imports_previous_forever_tracker_without_touching_planner(self):
-        self.check("""MOCK.oldTrackerDB={xp=120,seconds=30,bagBaseline=75,locked=true,
-            history={{at=20,xp=120}},kills={{name='Boar',playerLevel=7,mobLevel=6,xp=75,at=25,killTime=12.5}}}
-        MOCK.oldPlannerDB={settings={enabled=false},plan={quest=123}}
-        MOCK.start(); assert(A.migratedLegacy and A.db == ForeverLevelingTrackerDB)
-        assert(ElmoLevelingDB == A.db and A.db.xp == 120 and A.db.bagBaseline == 75 and A.db.locked)
-        assert(A.db.kills[1].killTime == 12.5 and ForeverLevelingDB.plan.quest == 123)
-        assert(MOCK.loadedAddons[1] == 'ForeverLeveling')""")
 
     def test_new_named_profile_wins_over_old_tracker_and_planner(self):
         self.check("""ElmoLevelingDB={xp=25,seconds=5}; MOCK.oldTrackerDB={xp=999,seconds=10}
@@ -1305,27 +1292,11 @@ class LevelingTests(unittest.TestCase):
         assert(A.db.xp == 25 and #MOCK.loadedAddons == 0 and not A.migratedLegacy)""")
 
     def test_unrelated_foreverleveling_addon_is_not_loaded_or_imported(self):
-        self.check("""MOCK.foreignLegacy=true; ForeverLevelingTrackerDB={xp=999,seconds=10}
+        self.check("""ForeverLevelingTrackerDB={xp=999,seconds=10}
         MOCK.start(); assert(A.db.xp == 0 and #MOCK.loadedAddons == 0 and not A.migratedLegacy)
         assert(ForeverLevelingTrackerDB.xp == 999)""")
 
-    def test_renamed_command_aliases_keep_the_old_shortcuts(self):
-        self.check("""MOCK.start()
-        assert(SLASH_CLASSICLEVELINGFOREVER1 == '/clf')
-        assert(SLASH_CLASSICLEVELINGFOREVER2 == '/classiclevelingforever')
-        assert(SLASH_CLASSICLEVELINGFOREVER3 == '/flvl' and SLASH_CLASSICLEVELINGFOREVER4 == '/fl')
-        assert(SLASH_CLASSICLEVELINGFOREVER5 == '/foreverleveling')
-        assert(ElmoLeveling == A and ForeverLeveling == nil)""")
 
-    def test_old_folder_is_data_only_and_cannot_open_the_old_planner(self):
-        helper = Path(__file__).resolve().parents[3] / 'scripts/fixtures/ForeverLeveling'
-        toc = (helper / 'ForeverLeveling.toc').read_text()
-        self.assertIn('## LoadOnDemand: 1', toc)
-        self.assertIn('ForeverLevelingTrackerDB, ForeverLevelingDB', toc)
-        self.assertEqual([line for line in toc.splitlines() if line.endswith('.lua')], ['Legacy.lua'])
-        self.check('BEFORE_HELPER_FRAMES = #MOCK.frames')
-        self.vm.execute((helper / 'Legacy.lua').read_text())
-        self.check('assert(#MOCK.frames == BEFORE_HELPER_FRAMES and ForeverLeveling == nil)')
 
 
     def test_forever_session_idle_only_increases_total(self):

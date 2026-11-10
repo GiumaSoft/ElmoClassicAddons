@@ -672,13 +672,11 @@ events:SetScript("OnEvent", function(_, event, ...)
             if ok ~= nil then ShowAnnouncementResult(ok, result) end
         end)
         SLASH_ELMOLFG1, SLASH_ELMOLFG2 = "/elmolfg", "/elfg"
-        SLASH_ELMOLFG3, SLASH_ELMOLFG4 = "/qlfg", "/questlfg"
-        SLASH_ELMOLFG5, SLASH_ELMOLFG6 = "/cqlfg", "/classicquestlfg"
         SlashCmdList.ELMOLFG = function(command)
             if command:lower() == "diag" then
                 A.Refresh(true)
                 local _, build, _, interface = GetBuildInfo()
-                local version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")) or "1.4.1"
+                local version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")) or "1.4.2"
                 print("ElmoLFG " .. version .. " · build " .. build .. " · interface " .. interface .. " · " .. #A.quests .. " quests · " .. #A.AvailableDungeons() .. "/" .. #A.dungeons .. " dungeons")
             else A.Toggle() end
         end

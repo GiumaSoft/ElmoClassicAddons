@@ -1,6 +1,6 @@
 local _, A = ...
 _G.ElmoLeveling = A
-A.version = "1.6.6"
+A.version = "1.6.7"
 
 local number = A.IsNumber
 
@@ -19,8 +19,7 @@ end
 
 function A.Init()
     if A.db then return end
-    A.MigrateSettings()
-    local db = type(ElmoLevelingDB) == "table" and ElmoLevelingDB or nil
+    local db = type(ElmoLevelingDB) == "table" and ElmoLevelingDB or {}
     db.xp = number(db.xp) and math.floor(db.xp) or 0
     db.seconds = number(db.seconds) and db.seconds or 0
     db.combatSeconds = number(db.combatSeconds) and math.min(db.combatSeconds, db.seconds) or 0
@@ -178,7 +177,7 @@ function A.Command(text)
         A.SetVisible(true)
         A.UI.Place()
     else
-        A.Print("/clf: show/hide. /clf reset: reset XP, kill history and session timers.")
-        A.Print("/clf lock | unlock | center. /flvl and /fl remain available.")
+        A.Print("/elvl: show/hide. /elvl reset: reset XP, kill history and session timers.")
+        A.Print("/elvl lock | unlock | center. /elmoleveling is also available.")
     end
 end

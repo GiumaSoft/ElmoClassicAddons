@@ -24,6 +24,12 @@ class ForeverTests(unittest.TestCase):
                 toc=(path/(name+'.toc')).read_text()
                 self.assertIn('## Interface: '+str(interface),toc)
                 self.assertIn('## Version: '+version,toc)
+                self.assertNotIn('Migration.lua', toc)
+                for retired in ('ClassicLeveling', 'ClassicTarget', 'ClassicSpellsTracker', 'ClassicQuestLFG', 'ElmoQuestReport'):
+                    self.assertNotIn(retired, toc)
+                import zipfile
+                with zipfile.ZipFile(ROOT/'dist'/f'{name}-{version}-{client}.zip') as package:
+                    self.assertEqual({entry.split('/')[0] for entry in package.namelist()}, {name})
                 vm=LuaRuntime()
                 compile=vm.eval('function(s,n)assert(loadstring(s,n))end')
                 for file in path.rglob('*.lua'):compile(file.read_text(),str(file))

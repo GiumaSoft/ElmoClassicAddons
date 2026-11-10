@@ -2,7 +2,7 @@
 ## Title: ElmoQuestEnhanced
 ## Notes: Configurable group reports for quest completion and objective progress.
 ## Author: Giuseppe
-## Version: 1.2.0
+## Version: 1.2.1
 ## SavedVariablesPerCharacter: ElmoQuestEnhancedDB
 ## X-Curse-Project-ID: 1785450
 

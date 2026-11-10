@@ -45,12 +45,11 @@ class RenameInterfaceTests(unittest.TestCase):
     def setUp(self):
         test_ui.ElmoLFGUITests.setUp(self)
 
-    def test_new_name_and_all_previous_commands_toggle_the_same_window(self):
+    def test_only_current_elmo_commands_toggle_the_window(self):
         self.lua.execute('''
         assert(ElmoLFGFrame and not ClassicQuestLFGFrame)
         assert(SLASH_ELMOLFG1=='/elmolfg' and SLASH_ELMOLFG2=='/elfg')
-        assert(SLASH_ELMOLFG3=='/qlfg' and SLASH_ELMOLFG4=='/questlfg')
-        assert(SLASH_ELMOLFG5=='/cqlfg' and SLASH_ELMOLFG6=='/classicquestlfg')
+        assert(SLASH_ELMOLFG3==nil and SLASH_ELMOLFG5==nil)
         ElmoLFGFrame:Hide();SlashCmdList.ELMOLFG('');assert(ElmoLFGFrame:IsShown())
         assert(not A.announcing and #sent==0 and #invited==0)
         ''')

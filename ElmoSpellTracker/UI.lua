@@ -164,7 +164,7 @@ function U.Settings()
         f.lock=button(f,"Lock bar",135,18,-157,function() A.SetLocked(not A.db.locked) end)
         button(f,"Clear tracked skills",174,165,-157,function() A.Clear();f.status:SetText("Skills will be added again when used.") end)
         f.count=label(f,11,"");f.count:SetPoint("TOPLEFT",18,-198)
-        local help=label(f,10,"Drag the bar handle to move it. Shift-right-click an icon\nwhile unlocked to remove it. /cst max 10 sets the limit.")
+        local help=label(f,10,"Drag the bar handle to move it. Shift-right-click an icon\nwhile unlocked to remove it. /est max 10 sets the limit.")
         help:SetPoint("TOPLEFT",18,-222)
         table.insert(UISpecialFrames,"ElmoSpellTrackerSettings")
     end

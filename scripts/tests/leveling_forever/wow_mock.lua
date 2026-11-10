@@ -104,18 +104,8 @@ function MOCK.gain(amount)
 end
 
 C_AddOns = {}
-function C_AddOns.GetAddOnMetadata(name, field)
-    if name == 'ForeverLeveling' and field == 'X-ClassicLevelingForever-Legacy' and not MOCK.foreignLegacy then return '1' end
-end
 function C_AddOns.LoadAddOn(name)
-    table.insert(MOCK.loadedAddons, name)
-    if MOCK.legacyError then error("Legacy loader unavailable") end
-    if name == "ForeverLeveling" then
-        if MOCK.oldTrackerDB then ForeverLevelingTrackerDB = MOCK.oldTrackerDB end
-        if MOCK.oldPlannerDB then ForeverLevelingDB = MOCK.oldPlannerDB end
-        return MOCK.oldTrackerDB ~= nil or MOCK.oldPlannerDB ~= nil
-    end
-    return false, "MISSING"
+    error("Unexpected addon load: " .. name)
 end
 
 function MOCK.item(id, sellPrice, options)

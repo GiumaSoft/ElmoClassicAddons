@@ -1,7 +1,6 @@
 local addonName, A = ...
 ElmoPlater = A
-ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units = "2.3.1", {}, {}
+A.version, A.records, A.units = "2.3.2", {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -26,39 +25,6 @@ function A.Bool(v)
 end
 function A.Print(text)
     DEFAULT_CHAT_FRAME:AddMessage("|cffffd100ElmoPlater:|r " .. text)
-end
-
--- One-time recovery of global overrides left by the former icon-bar build.
--- Normal operation never changes global native dimensions or stacking bounds.
-function A.Recover()
-    if InCombatLockdown() then return false end
-    local saved = A.db.nativeClickRestoreSize
-    if type(saved) == "table" and C_NamePlate and C_NamePlate.GetNamePlateSize and C_NamePlate.SetNamePlateSize then
-        local w, h = C_NamePlate.GetNamePlateSize()
-        if A.Number(w) and A.Number(h) and w > 2048 and h > 2048 and
-            A.Number(saved.width) and A.Number(saved.height) and saved.width > 0 and saved.width < 2048 and
-            saved.height > 0 and saved.height < 2048 then
-            C_NamePlate.SetNamePlateSize(saved.width, saved.height)
-        end
-        w, h = C_NamePlate.GetNamePlateSize()
-        if not A.Number(w) or not A.Number(h) or w > 2048 or h > 2048 then return false end
-        A.db.nativeClickRestoreSize = nil
-    end
-    local insets = A.db.nativeClickRestoreInsets
-    if type(insets) == "table" and #insets == 4 and C_NamePlateManager and Enum and Enum.NamePlateType then
-        local a, b, c, d = C_NamePlateManager.GetNamePlateHitTestInsets(Enum.NamePlateType.Friendly)
-        if A.Number(a) and A.Number(b) and A.Number(c) and A.Number(d) and
-            a > 2048 and b > 2048 and c > 2048 and d > 2048 then
-            C_NamePlateManager.SetNamePlateHitTestInsets(Enum.NamePlateType.Friendly, unpack(insets))
-        end
-        A.db.nativeClickRestoreInsets = nil
-    end
-    if type(A.db.originalNativeDebuffs) == "boolean" and C_CVar and C_CVar.SetCVarBitfield then
-        A.Call(C_CVar.SetCVarBitfield, "nameplateEnemyNpcAuraDisplay", 2, A.db.originalNativeDebuffs)
-        A.db.originalNativeDebuffs = nil
-    end
-    A.db.barClicks = nil
-    return true
 end
 
 function A.Scan()
@@ -166,12 +132,10 @@ function A.Command(msg)
 end
 
 function A.Initialize()
-    A.MigrateSettings()
     if A.ready then return end
     if type(ElmoPlaterDB) ~= "table" then
-        ElmoPlaterDB = type(ClassicTargetDB) == "table" and ClassicTargetDB or {}
+        ElmoPlaterDB = {}
     end
-    ClassicTargetDB = ElmoPlaterDB
     A.db = ElmoPlaterDB
     -- Retire settings used only by the removed priority engine.
     A.db.rules, A.db.ruleSchema, A.db.watchDebuff, A.db.learnedDebuffs = nil, nil, nil, nil
@@ -179,11 +143,8 @@ function A.Initialize()
     A.db.questKills = A.db.questKills ~= false
     A.Settings.RegisterOptions()
     A.Auras.Initialize()
-    A.ready = A.Recover()
+    A.ready = not InCombatLockdown()
     if not A.ready then return end
-    SLASH_CLASSICPLATER1, SLASH_CLASSICPLATER2 = "/cplater", "/classicplater"
-    SLASH_CLASSICPLATER3, SLASH_CLASSICPLATER4 = "/ctarget", "/classictarget"
-    SlashCmdList.CLASSICPLATER = A.Command
     SLASH_ELMOPLATER1="/elmoplater"; SLASH_ELMOPLATER2="/eplater"
     SlashCmdList.ELMOPLATER=A.Command
     A.Scan()

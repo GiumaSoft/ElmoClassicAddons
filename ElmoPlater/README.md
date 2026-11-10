@@ -1,4 +1,4 @@
-# ElmoPlater 2.3.1
+# ElmoPlater 2.3.2
 
 Classic Era / Forever nameplates with solid reaction colours, contrasting
 borders, health percentage, difficulty-coloured levels and your harmful debuffs.
@@ -37,8 +37,8 @@ Open **Options > AddOns > ElmoPlater**, or `/eplater` (`/elmoplater`), for:
 - Show/hide the quest kill knife.
 - Debuff icon size, from 14 to 36 pixels.
 
-Settings are saved per character. Previous `/cplater`, `/classicplater`,
-`/ctarget` and `/classictarget` commands remain aliases for the same options page.
+Settings are saved per character in ElmoPlaterDB. Former-addon importers and
+command aliases have been removed.
 `/eplater status` reports tracked bars and health readability; `/eplater auras`
 reports the active aura display and skips direct queries when Blizzard manages
 that display or restricts aura data.
@@ -80,7 +80,7 @@ Addon artwork does not intercept mouse input. Guarded native hit-test bindings
 follow the owned health rectangle and remain clipped by Blizzard's nameplate
 bounds. Removing or pooling a plate restores native artwork and click anchors.
 Global nameplate dimensions and stacking settings are not changed during normal
-operation. One-time recovery of old dimension/hit-test overrides is retained.
+operation. Current packages contain only ElmoPlater.
 
 Source and installed-package checks use Lua 5.1 mocks in
 `scripts/tests/ElmoPlater`. These verify geometry, auras, opaque HP display, quest

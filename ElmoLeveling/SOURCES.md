@@ -38,20 +38,9 @@ history when combat log APIs are absent. Unknown mob levels, timing and XP/s
 remain unknown. Relative gear weights are heuristics inherited from the Era
 tracker, not a simulation of Forever balance, procs or sets.
 
-Only ElmoLevelingDB holds the new tracker. The local installation has
-a separately tagged, data-only helper under the previous ForeverLeveling folder
-to load ForeverLevelingTrackerDB for migration. It preserves the older planner's
-ForeverLevelingDB without interpreting it as XP. This helper is not distributed
-in the public archive and unrelated addons are not used for import. No
-SavedVariables files are edited by the installer. ClassicLeveling remains
-separate in _classic_era_.
+Only ElmoLevelingDB holds the tracker profile. Former-addon importers are no longer included or loaded. Existing Elmo profiles are preserved; the installer does not modify SavedVariables files.
 
-Development evidence outside the addon: tools/classiclevelingforever/test_addon.py,
-its wow_mock.lua fixture and test_parity.py, plus tmp/classiclevelingforever/api/
-sources.json, parity.json and installation.json. All 205 unit checks and fifteen
-comparisons with ClassicLeveling use simulated APIs; no live-client verification
-is claimed.
-
+Development checks live in scripts/tests/leveling_era and scripts/tests/leveling_forever. They use simulated APIs and do not constitute live-client verification.
 
 Session Combat uses PLAYER_REGEN_DISABLED / PLAYER_REGEN_ENABLED and initializes
 from the readable UnitAffectingCombat("player") state. It does not require combat

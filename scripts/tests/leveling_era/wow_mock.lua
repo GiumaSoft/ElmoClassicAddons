@@ -103,13 +103,7 @@ end
 
 C_AddOns = {}
 function C_AddOns.LoadAddOn(name)
-    table.insert(MOCK.loadedAddons, name)
-    if MOCK.legacyError then error("Legacy loader unavailable") end
-    if name == "ClassicXPTracker" and MOCK.legacyDB then
-        ClassicXPTrackerDB = MOCK.legacyDB
-        return true
-    end
-    return false, "MISSING"
+    error("Unexpected addon load: " .. name)
 end
 
 function MOCK.item(id, sellPrice, options)

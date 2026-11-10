@@ -1,4 +1,4 @@
-# ElmoLFG 1.4.1
+# ElmoLFG 1.4.2
 
 ## Options menu
 
@@ -7,8 +7,8 @@ Open **Options > AddOns > ElmoLFG** for Autojoin and a button opening the comple
 Find groups for active quests and Classic dungeons in Classic Era 1.15.9 and
 WoW Forever 1.60.1. Renamed from ClassicQuestLFG, with one shared implementation.
 
-Open `/elmolfg` or `/elfg`, or click the minimap button. Existing `/qlfg`,
-`/questlfg`, `/cqlfg` and `/classicquestlfg` commands remain available.
+Open `/elmolfg` or `/elfg`, or click the minimap button. Former command aliases
+have been retired.
 
 - Select active quests or available dungeons and choose your announcement channel.
 - Completed quests, including quests ready to turn in, are removed from the list

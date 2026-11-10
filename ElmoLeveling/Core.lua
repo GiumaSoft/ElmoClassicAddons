@@ -13,18 +13,9 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         A.Mobs.Init()
         A.UI.RegisterOptions()
         A.Upgrades.HookBags()
-        SLASH_CLASSICLEVELINGFOREVER1 = "/clf"
-        SLASH_CLASSICLEVELINGFOREVER2 = "/classiclevelingforever"
-        SLASH_CLASSICLEVELINGFOREVER3 = "/flvl"
-        SLASH_CLASSICLEVELINGFOREVER4 = "/fl"
-        SLASH_CLASSICLEVELINGFOREVER5 = "/foreverleveling"
-        SlashCmdList.CLASSICLEVELINGFOREVER = A.Command
         SLASH_ELMOLEVELING1="/elmoleveling"
         SLASH_ELMOLEVELING2="/elvl"
         SlashCmdList.ELMOLEVELING=A.Command
-        SLASH_CLASSICLEVELING1="/clvl"; SLASH_CLASSICLEVELING2="/classicleveling"
-        SLASH_CLASSICLEVELING3="/cxp"; SLASH_CLASSICLEVELING4="/classicxp"
-        SlashCmdList.CLASSICLEVELING=A.Command
         return
     end
     if not A.db then return end

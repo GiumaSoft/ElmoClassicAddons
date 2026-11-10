@@ -1,4 +1,4 @@
-# ElmoQuestEnhanced 1.2.0
+# ElmoQuestEnhanced 1.2.1
 
 Reports your quest completions and optional kill/item progress to your current group.
 Open **Options > AddOns > ElmoQuestEnhanced**, or type `/eqe` or
@@ -29,14 +29,9 @@ can report its completion. Missing/private data is retried rather than inferred
 from counters alone. Messages are English; names and objective wording come
 from the client's quest log. Text stays within the 255-byte chat limit.
 
-Renamed from ElmoQuestReport. Extract both folders from the package into
-`Interface/AddOns` and restart WoW. Enable ElmoQuestEnhanced in the AddOns list.
-The bundled ElmoQuestReport folder is now an inactive compatibility stub, so
-only the new addon reports completions. The former version had no saved settings
-to migrate; existing installations keep their completion reports enabled and
-must opt in to progress reports.
-If Questie's own announcements are enabled, disable those options to avoid
-receiving the same completion from both addons. Questie settings are not changed.
+Extract the single ElmoQuestEnhanced folder into Interface/AddOns. Former
+compatibility folders are no longer included; current ElmoQuestEnhancedDB
+settings are preserved.
 
 Shared source supports Classic Era 11509 and Forever 16001. The Era reader
 temporarily expands collapsed quest headers only when the journal's visible

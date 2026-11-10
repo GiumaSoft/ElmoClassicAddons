@@ -1,4 +1,4 @@
-# ElmoLeveling 1.6.6
+# ElmoLeveling 1.6.7
 
 ## Options menu
 
@@ -83,14 +83,13 @@ are never changed automatically.
 
 ## Commands
 
-- `/clf` or `/classiclevelingforever`: show/hide the dashboard.
-- `/clf show` / `/clf hide`: set visibility.
-- `/clf lock` / `/clf unlock`: control dragging.
-- `/clf center`: restore the default position.
-- `/clf reset`: reset XP, history, kill frequency and both session timers.
-- `/clf help`: show command help.
+- `/elvl` or `/elmoleveling`: show/hide the dashboard.
+- `/elvl show` / `/elvl hide`: set visibility.
+- `/elvl lock` / `/elvl unlock`: control dragging.
+- `/elvl center`: restore the default position.
+- `/elvl reset`: reset XP, history, kill frequency and both session timers.
+- `/elvl help`: show command help.
 
-The previous `/flvl`, `/fl` and `/foreverleveling` aliases remain available.
 
 ## Install and existing profiles
 
@@ -99,28 +98,13 @@ Use the package labelled **classic** for Classic Era and **forever** for Forever
 The tracker uses **ElmoLevelingDB** per character. The public archive
 contains only the ElmoLeveling addon folder.
 
-For the author's existing installation, a separate, local-only data helper loads
-the previous **ForeverLevelingTrackerDB** so that XP, history and settings can be
-migrated on first login. The helper creates no UI. Only a helper with the explicit
-import marker is loaded; an unrelated addon named ForeverLeveling is not loaded
-or imported. An existing ElmoLeveling profile always takes precedence.
-The older ForeverLeveling route planner's **ForeverLevelingDB** is preserved and
-never interpreted as XP data. No Classic Era character data is copied across,
-and no SavedVariables files are changed by the build script.
+Existing ElmoLeveling profiles are preserved. Former-addon importers are no longer included or loaded. The installer does not modify SavedVariables files.
 
 ## Validation
 
-205 automated checks execute the actual Lua files using Lua 5.1 and mocked APIs.
-They include all core XP, bag, history, timing and upgrade behavior, plus a
-Forever fixture configured before addon load: restricted/absent combat log,
-removed Classic events/globals, C_TooltipInfo, C_SpellBook, C_Traits, combined-bag
-slot identity, secret values, combat-session timing, profile migration and preservation of the older
-planner profile. Fifteen additional differential scenarios compare shared behavior
-directly with the current ClassicLeveling 1.6.3 source. The combat restrictions
-described above remain explicit differences. Live-client behavior and appearance
-still require an in-game check.
+Automated checks execute the actual Lua files using Lua 5.1 and mocked APIs. They cover XP, bags, history, timing, equipment upgrades, current-profile preservation and both client API variants. Live-client behavior and appearance still require an in-game check.
 
-Release versions are kept aligned with ClassicLeveling. The release packager
+The release packager
 refuses a mismatch between both TOCs and the displayed addon version.
 # ElmoLeveling
 
@@ -149,7 +133,3 @@ removes the mob list while averages continue; **Reset** also clears averages.
 Respawn sampling uses public XP kill notices and readable living units. Protected
 unit identities are skipped. It works independently of exact kill-time data,
 which can remain unavailable in Forever.
-
-## Elmo migration
-
-Settings are imported from ClassicLeveling, ClassicLevelingForever, ClassicXPTracker, ForeverLevelingTracker. Legacy settings import remains supported when previous data is available. Restart WoW after installing the new folder. Release version is unchanged.
