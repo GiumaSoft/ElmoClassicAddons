@@ -1,4 +1,8 @@
-# ElmoLeveling 1.6.5
+# ElmoLeveling 1.6.6
+
+## Options menu
+
+Open **Options > AddOns > ElmoLeveling** for visibility, position locking, kill-history expansion, centering, session reset and history clearing. Existing slash commands and tracker controls remain available.
 
 An English leveling dashboard for **WoW Classic Era 1.15.9 (11509)** and **WoW Forever 1.60.1 (16001)**. Both packages use the same source files; the build generates only the client selector and manifest. API capability checks handle talents, tooltips, spells and protected combat data.
 

@@ -1,4 +1,8 @@
-# ElmoSpellTracker 1.0.2
+# ElmoSpellTracker 1.0.3
+
+## Options menu
+
+Open **Options > AddOns > ElmoSpellTracker** for capacity, locking, removal of a saved ability by its number, clearing tracked skills and the existing bar settings window. Changes use the same saved settings and validation as the slash commands.
 
 A standalone **WoW Classic Era and Forever** addon. Your successfully used player abilities
 with their own cooldown are learned automatically and displayed in one horizontal bar.

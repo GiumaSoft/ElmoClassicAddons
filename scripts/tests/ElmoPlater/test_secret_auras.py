@@ -21,27 +21,27 @@ assert(#record.auras == 1 and record.frame.icons[1]:IsShown(),
 personal.sourceUnit = nil
 MOCK.event('UNIT_AURA', 'nameplate1')
 assert(#record.auras == 1 and record.frame.icons[1].texture.texture == 589)
--- Texture APIs may receive the protected icon directly; rule/catalog data may not.
+-- Texture APIs may receive the protected icon directly.
 personal.sourceUnit = secretSource; personal.icon = secretIcon
 personal.spellId = secretSpell; personal.expirationTime = secretExpiry; personal.applications = secretCount
 MOCK.event('UNIT_AURA', 'nameplate1')
 assert(#record.auras == 1 and record.frame.icons[1]:IsShown())
 assert(rawequal(record.frame.icons[1].texture.texture, secretIcon),
     'Protected icons must reach SetTexture without numeric coercion or boolean tests')
-assert(not record.aurasKnown and record.auras[1].id == nil)
-assert(not A.db.learnedDebuffs[secretSpell] and not A.db.learnedDebuffs[secretIcon])
+assert(not record.aurasKnown)
+assert(A.db.learnedDebuffs==nil)
 -- Readable non-player casters are still rejected, including pets.
 personal.sourceUnit = 'party1'; MOCK.event('UNIT_AURA', 'nameplate1')
 assert(#record.auras == 0 and not record.frame.icons[1]:IsShown())
 personal.sourceUnit = 'pet'; MOCK.event('UNIT_AURA', 'nameplate1')
 assert(#record.auras == 0)
--- Ordinary personal debuffs retain readable countdowns, stacks and learning.
+-- Ordinary personal debuffs retain readable countdowns and stacks.
 personal.sourceUnit = 'player'; personal.icon = 'Interface\\\\Icons\\\\Spell_Shadow_ShadowWordPain'
 personal.spellId = 589; personal.expirationTime = MOCK.time + 5; personal.applications = 3
 MOCK.event('UNIT_AURA', 'nameplate1')
 assert(record.frame.icons[1].texture.texture == personal.icon)
 assert(record.frame.icons[1].timer:GetText() == '5' and record.frame.icons[1].count:GetText() == '3')
-assert(record.aurasKnown and A.db.learnedDebuffs[589])
+assert(record.aurasKnown and A.db.learnedDebuffs==nil)
 -- The removal event hides a protected aura without comparing its expiration time.
 personal.expirationTime = secretExpiry
 MOCK.event('UNIT_AURA', 'nameplate1')
@@ -78,4 +78,4 @@ MOCK.event('UNIT_AURA', 'target')
 assert(not record.aurasKnown and #record.auras == 0)
 assert(not record.frame.icons[1]:IsShown() and indexedCalls == 0)
 ''')
-print('Protected-aura checks passed: filtered private/missing caster, opaque/string icon display, no secret catalog keys, caster exclusions, countdown/stacks and removal. Simulated APIs only.')
+print('Protected-aura checks passed: filtered private/missing caster, opaque/string icon display, no aura learning, caster exclusions, countdown/stacks and removal. Simulated APIs only.')

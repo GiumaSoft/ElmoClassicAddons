@@ -25,11 +25,6 @@ def create_vm():
     end
     NamePlateSetupOptions={healthBarHeight=12,unitNameAnchorStyle=1}
     NamePlateConstants={NAME_ANCHOR_STYLES={InsideHealthBar=1}}
-    function CombatLogGetCurrentEventInfo()return unpack(MOCK.logEvent)end
-    function MOCK.log(event,guid,name,source,spellID,kind)
-     MOCK.logEvent={MOCK.time,event,false,source or UnitGUID('player'),'Source',0,0,guid,name,0,0,spellID or 772,'Spell',1,kind or 'DEBUFF'}
-     MOCK.event('COMBAT_LOG_EVENT_UNFILTERED')
-    end
     local oldMob=MOCK.mob
     function MOCK.mob(...)
      local d,p=oldMob(...);MOCK.inFixture=true
@@ -45,13 +40,6 @@ def create_vm():
     ''')
     ns=vm.table()
     load=vm.eval('function(s,n,ns) assert(loadstring(s,"@"..n))("ElmoPlater",ns)end')
-    if os.environ.get('ELMO_TEST_FOREVER'):
-        vm.execute("""
-        local getter=CombatLogGetCurrentEventInfo
-        C_CombatLog={IsCombatLogRestricted=function()return MOCK.logRestricted==true end,GetCurrentEventInfo=getter}
-        CombatLogGetCurrentEventInfo=nil
-        C_EventUtils={IsEventValid=function(event)return not MOCK.invalidEvents or not MOCK.invalidEvents[event] end}
-        """)
     addon=Path(os.environ.get('ELMO_TEST_ADDON',ROOT/'ElmoPlater'))
     for name in (addon/'ElmoPlater.toc').read_text().splitlines():
         if name.endswith('.lua'): load((addon/name).read_text(),name,ns)

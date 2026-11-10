@@ -1,6 +1,6 @@
 local _, A = ...
 _G.ElmoLeveling = A
-A.version = "1.6.5"
+A.version = "1.6.6"
 
 local number = A.IsNumber
 

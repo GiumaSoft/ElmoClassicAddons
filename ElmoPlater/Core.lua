@@ -1,7 +1,7 @@
 local addonName, A = ...
 ElmoPlater = A
 ClassicTarget = A -- Compatibility for existing integrations.
-A.version, A.records, A.units, A.attacked = "2.2.5", {}, {}, {}
+A.version, A.records, A.units = "2.3.1", {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -23,26 +23,6 @@ function A.Text(v)
 end
 function A.Bool(v)
     if not A.Secret(v) and type(v) == "boolean" then return v end
-end
-function A.CombatLogAvailable()
-    -- Forever reserves the event for Blizzard even outside restricted combat.
-    local _, _, _, interface = A.Call(GetBuildInfo)
-    if A.Number(interface) and interface >= 16000 and interface < 17000 then return false end
-    local restricted = A.Call(C_CombatLog and C_CombatLog.IsCombatLogRestricted)
-    return not A.Secret(restricted) and restricted ~= true and
-        type(C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo) == "function"
-end
-function A.RegisterCombatLog()
-    if A.CombatLogAvailable() then
-        if A.combatLogRegistered then return end
-        local valid = A.Call(C_EventUtils and C_EventUtils.IsEventValid, "COMBAT_LOG_EVENT_UNFILTERED")
-        if A.Bool(valid) ~= false then
-            A.combatLogRegistered = pcall(A.frame.RegisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED")
-        end
-    elseif A.combatLogRegistered then
-        A.Call(A.frame.UnregisterEvent, A.frame, "COMBAT_LOG_EVENT_UNFILTERED")
-        A.combatLogRegistered = false
-    end
 end
 function A.Print(text)
     DEFAULT_CHAT_FRAME:AddMessage("|cffffd100ElmoPlater:|r " .. text)
@@ -111,8 +91,8 @@ function A.AuraStatus()
             ", container=" .. tostring(record.auraContainer ~= nil))
         if A.Bool(A.Call(UnitIsUnit, unit, "target")) == true then units[#units + 1] = unit end
     end
-    if A.Auras.Restricted() then
-        report("Aura data restricted: display is managed by Blizzard; direct queries skipped.")
+    if A.Auras.available or A.Auras.Restricted() then
+        report("Blizzard aura display or restricted data: direct queries skipped.")
         A.db.auraDiagnostic = lines
         return
     end
@@ -137,31 +117,26 @@ function A.AuraStatus()
     A.db.auraDiagnostic = lines
 end
 
-function A.CombatLog(...)
-    local _, event, _, source, _, _, _, dest = ...
-    event, source, dest = A.Text(event), A.Text(source), A.Text(dest)
-    if not event or not dest or not (dest:match("^Creature%-") or dest:match("^Vehicle%-")) then return end
-    if event == "UNIT_DIED" or event == "UNIT_DESTROYED" then
-        A.attacked[dest] = nil; A.Update(false)
-    elseif source and source == A.Text(A.Call(UnitGUID,"player")) then
-        local damage = event:match("_DAMAGE$") or event:match("_MISSED$") or event == "DAMAGE_SHIELD"
-        local debuff = (event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH") and A.Text(select(15, ...)) == "DEBUFF"
-        if debuff then
-            local id, name = A.Number(select(12, ...)), A.Text(select(13, ...))
-            local info = id and A.Spells.Info(id)
-            A.Rules.Observe(id, name, info and info.icon)
-        end
-        if damage or debuff then A.attacked[dest] = true; A.Update(false) end
-    end
-end
-
 function A.Command(msg)
     local command, value = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
     command = command:lower()
     if command == "" or command == "config" or command == "settings" then
-        A.Settings.Toggle()
+        A.Settings.Open()
     elseif command == "auras" then
         A.AuraStatus()
+    elseif command == "questkills" then
+        value = value:lower()
+        if value == "on" or value == "off" then
+            A.db.questKills = value == "on"
+            A.QuestKills.Invalidate()
+        elseif value ~= "" then
+            A.Print("Usage: /eplater questkills on|off")
+            return
+        end
+        A.Print("Quest kill marker: " .. (A.db.questKills and "enabled" or "disabled") ..
+            ". /eplater questkills on|off")
+        A.Update(false)
+        return
     elseif command == "status" then
         local visible, custom, private = 0, 0, 0
         for _, record in pairs(A.units) do
@@ -184,19 +159,8 @@ function A.Command(msg)
                 end
             end
         end
-    elseif command == "debuff" then
-        if value:lower() == "any" then
-            A.db.rules, A.db.watchDebuff = {}, ""
-            A.Print("Rules cleared. No priority highlight until you add a rule.")
-        else
-            local info = A.Spells.Info(tonumber(value) or value)
-            if not info or not info.id then A.Print("Unknown spell. Open /eplater and add a spell ID."); return end
-            A.db.rules, A.db.watchDebuff = {}, value
-            A.Rules.Add(info.id)
-            A.Print("Single priority rule: " .. info.name .. ".")
-        end
     else
-        A.Print("/eplater: Rules Manager. First matching enabled rule wins. Health and debuff rules share the same ordered list; only engaged mobs qualify.")
+        A.Print("/eplater: options. /eplater questkills on|off: quest knife. /eplater status | auras: diagnostics.")
     end
     A.Update(true)
 end
@@ -209,20 +173,21 @@ function A.Initialize()
     end
     ClassicTargetDB = ElmoPlaterDB
     A.db = ElmoPlaterDB
-    A.db.watchDebuff = type(A.db.watchDebuff) == "string" and A.db.watchDebuff or ""
+    -- Retire settings used only by the removed priority engine.
+    A.db.rules, A.db.ruleSchema, A.db.watchDebuff, A.db.learnedDebuffs = nil, nil, nil, nil
     A.db.plateAuraSize = math.max(14, math.min(36, A.Number(A.db.plateAuraSize) or 22))
-    A.Rules.Initialize()
+    A.db.questKills = A.db.questKills ~= false
+    A.Settings.RegisterOptions()
     A.Auras.Initialize()
     A.ready = A.Recover()
     if not A.ready then return end
-    A.RegisterCombatLog()
     SLASH_CLASSICPLATER1, SLASH_CLASSICPLATER2 = "/cplater", "/classicplater"
     SLASH_CLASSICPLATER3, SLASH_CLASSICPLATER4 = "/ctarget", "/classictarget"
     SlashCmdList.CLASSICPLATER = A.Command
     SLASH_ELMOPLATER1="/elmoplater"; SLASH_ELMOPLATER2="/eplater"
     SlashCmdList.ELMOPLATER=A.Command
     A.Scan()
-    A.Print("Loaded " .. A.version .. ". /eplater: learned debuffs and ordered priority rules.")
+    A.Print("Loaded " .. A.version .. ". /eplater: nameplate options.")
 end
 
 local elapsed = 0
@@ -230,14 +195,12 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
     if event == "ADDON_LOADED" then
         if unit == addonName and IsLoggedIn() then A.Initialize() end
     elseif event == "PLAYER_LOGIN" then A.Initialize()
-    elseif event == "PLAYER_REGEN_ENABLED" then A.attacked = {}; A.Initialize(); A.Update(true)
+    elseif event == "PLAYER_REGEN_ENABLED" then A.Initialize(); A.Update(true)
     elseif A.ready then
         if event == "NAME_PLATE_UNIT_ADDED" then A.Add(unit)
         elseif event == "NAME_PLATE_UNIT_REMOVED" then A.Remove(unit)
         elseif event == "PLAYER_LOGOUT" or event == "PLAYER_LEAVING_WORLD" then A.Clear()
-        elseif event == "PLAYER_ENTERING_WORLD" then A.RegisterCombatLog(); A.Scan()
-        elseif event == "COMBAT_LOG_EVENT_UNFILTERED" and A.CombatLogAvailable() then
-            A.CombatLog(A.Call(C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo))
+        elseif event == "PLAYER_ENTERING_WORLD" then A.QuestKills.Invalidate(true); A.Scan()
         elseif event == "CVAR_UPDATE" then
             if A.Text(unit) and unit:lower():match("^nameplate") then
                 for _, record in pairs(A.units) do record.clickBound, record.clickFailed = false, false end
@@ -246,14 +209,18 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
         elseif event == "PLAYER_TARGET_CHANGED" then A.Update(true, "target")
         elseif event == "PLAYER_REGEN_DISABLED" then A.Update(true)
         elseif event == "QUEST_LOG_UPDATE" or event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" or
-            event == "BAG_UPDATE_DELAYED" then A.QuestLoot.Invalidate(); A.Update(false)
+            event == "QUEST_TURNED_IN" or event == "QUEST_AUTOCOMPLETE" or event == "QUEST_DATA_LOAD_RESULT" then
+            if A.QuestKills.Invalidate(event ~= "QUEST_LOG_UPDATE" and event ~= "QUEST_DATA_LOAD_RESULT") then
+                A.Update(false)
+            end
         else A.Update(false) end
     end
 end)
 for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "NAME_PLATE_UNIT_ADDED",
     "NAME_PLATE_UNIT_REMOVED", "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_FACTION", "UNIT_FLAGS",
     "PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT",
-    "CVAR_UPDATE", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "BAG_UPDATE_DELAYED"}) do
+    "CVAR_UPDATE", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN",
+    "QUEST_AUTOCOMPLETE", "QUEST_DATA_LOAD_RESULT"}) do
     A.Call(A.frame.RegisterEvent, A.frame, event)
 end
 A.frame:SetScript("OnUpdate", function(_, dt)

@@ -74,7 +74,7 @@ assert(container.points[1][1]=='BOTTOM' and container.points[1][3]=='TOP')
 MOCK.units.target = mob
 MOCK.aura('nameplate2',589,10)
 MOCK.event('UNIT_AURA','target')
-assert(#record.auras==1 and A.db.learnedDebuffs[589])
+assert(#record.auras==0 and A.db.learnedDebuffs==nil)
 assert(#record.frame.icons==0, 'The legacy display must not duplicate the native container')
 
 MOCK.secretAuras, MOCK.combat = true, true
@@ -84,9 +84,9 @@ MOCK.event('UNIT_AURA','nameplate2'); MOCK.event('UNIT_AURA','target')
 MOCK.event('PLAYER_TARGET_CHANGED'); MOCK.advance(.3)
 assert(record.frame:IsShown() and container.enabled and container.unit=='nameplate2')
 assert(MOCK.blockedQueries==0, 'No forbidden raw aura query may be attempted')
--- Size/layer changes must affect only the public container, never its adopted buttons.
+-- Scale only the public container, never its adopted buttons.
 A.db.plateAuraSize=36; A.Update(false)
-assert(container.scale==36/22 and container.frameLevel==record.frame.frameLevel+2)
+assert(container.scale==36/22 and container.frameLevel==nil)
 A.Command('auras')
 assert(MOCK.blockedQueries==0)
 assert(A.db.auraDiagnostic[2]=='Aura display: Blizzard container')
@@ -100,7 +100,7 @@ assert(#MOCK.containers==1 and MOCK.blockedQueries==0)
 MOCK.secretAuras, MOCK.combat = false, false
 MOCK.aura('nameplate3',772,5)
 MOCK.event('PLAYER_REGEN_ENABLED')
-assert(A.units.nameplate3.aurasKnown and #A.units.nameplate3.auras==1)
+assert(not A.units.nameplate3.aurasKnown and #A.units.nameplate3.auras==0)
 MOCK.event('PLAYER_LOGOUT'); assert(not container.enabled and plate.UnitFrame.alpha==1)
 ''')
-print('Aura-container checks passed: no forbidden raw queries, native personal-filter/icon/timer bindings, no duplicate icons, public-only scaling/layering, pooling and recovery. Simulated APIs only.')
+print('Aura-container checks passed: no forbidden raw queries, native personal-filter/icon/timer bindings, no duplicate icons, public-only scaling, pooling and recovery. Simulated APIs only.')

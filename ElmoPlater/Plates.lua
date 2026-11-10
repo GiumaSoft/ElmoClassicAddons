@@ -8,29 +8,39 @@ local function text(parent, size)
     return label
 end
 
-local function make(plate)
-    local bounds = CreateFrame("Frame", nil, UIParent)
-    bounds:EnableMouse(false); bounds:Hide()
-    local f = CreateFrame("Frame", nil, UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+local function makeDisplay(parent)
+    local f = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     f:EnableMouse(false); f:SetFrameStrata("LOW")
     f:SetBackdrop({bgFile = WHITE, edgeFile = WHITE, edgeSize = 1})
     f:SetBackdropColor(.025, .025, .025, .95); f:SetBackdropBorderColor(.08, .08, .08, 1)
     f.bar = CreateFrame("StatusBar", nil, f); f.bar:EnableMouse(false)
     f.bar:SetPoint("TOPLEFT", 1, -1); f.bar:SetPoint("BOTTOMRIGHT", -1, 1)
     f.bar:SetStatusBarTexture(WHITE)
-    f.questBag = f.bar:CreateTexture(nil, "OVERLAY")
-    f.questBag:SetSize(16, 16); f.questBag:SetPoint("RIGHT", f.bar, "LEFT", -4, 0)
-    f.questBag:Hide()
     f.questKill = f.bar:CreateTexture(nil, "OVERLAY")
-    f.questKill:SetSize(16, 16); f.questKill:Hide()
+    f.questKill:SetSize(16, 16); f.questKill:SetPoint("RIGHT", f.bar, "LEFT", -4, 0)
+    f.questKill:Hide()
     f.percent = text(f.bar, 12); f.percent:SetPoint("CENTER")
     f.header = CreateFrame("Frame", nil, f); f.header:EnableMouse(false)
     f.header:SetPoint("BOTTOM", f, "TOP", 0, 3); f.header:SetHeight(14)
     f.name = text(f.header, 10); f.name:SetPoint("LEFT", f.header, "LEFT", 0, 0)
     f.name:SetHeight(14); f.name:SetJustifyH("LEFT"); f.name:SetWordWrap(false)
-    f.level = text(f.header, 10); f.level:SetPoint("LEFT", f.name, "RIGHT", 6, 0)
-    f.level:SetHeight(14); f.level:SetJustifyH("LEFT"); f.level:SetWordWrap(false)
+    f.levelBadge = CreateFrame("Frame", nil, f, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    f.levelBadge:EnableMouse(false); f.levelBadge:SetPoint("LEFT", f, "RIGHT", 4, 0)
+    f.levelBadge:SetBackdrop({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8,
+        insets = {left = 2, right = 2, top = 2, bottom = 2}})
+    f.levelBadge:SetBackdropColor(.025, .025, .025, .95)
+    f.levelBadge:SetBackdropBorderColor(.47, .36, .14, 1)
+    f.level = text(f.levelBadge, 12); f.level:SetPoint("CENTER")
+    f.level:SetWordWrap(false)
     f.icons = {}; f:Hide()
+    return f
+end
+
+local function make(plate)
+    local bounds = CreateFrame("Frame", nil, UIParent)
+    bounds:EnableMouse(false); bounds:Hide()
+    local f = makeDisplay(UIParent)
     return {plate = plate, bounds = bounds, frame = f, auras = {}, auraContainer = A.Auras.Create(f)}
 end
 
@@ -85,7 +95,6 @@ end
 
 function A.Clear()
     for unit in pairs(A.units) do A.Remove(unit) end
-    A.attacked = {}
 end
 
 function A.Add(unit)
@@ -121,8 +130,8 @@ function A.Add(unit)
 end
 
 local function scan(record)
-    if A.Auras.Restricted() then
-        -- The container draws restricted auras. Rule logic must not query them.
+    if record.auraContainer or A.Auras.Restricted() then
+        -- The native container owns the display; raw aura data is unnecessary.
         record.auras, record.aurasKnown = {}, false
         return
     end
@@ -155,7 +164,7 @@ local function scan(record)
         if type(data) ~= "table" then break end
         if type(canaccesstable) == "function" and not canaccesstable(data) then record.aurasKnown = false; break end
         local source, expires = A.Text(data.sourceUnit), A.Number(data.expirationTime) or 0
-        if A.Secret(data.sourceUnit) or A.Secret(data.spellId) then record.aurasKnown = false end
+        if A.Secret(data.sourceUnit) then record.aurasKnown = false end
         -- HARMFUL|PLAYER already filters ownership when the caster is withheld.
         if (not source or source == "player" or A.Bool(A.Call(UnitIsUnit, source, "player")) == true) and
             (expires == 0 or expires > GetTime()) then
@@ -163,16 +172,12 @@ local function scan(record)
             if not A.Secret(texture) then
                 texture = A.Number(texture) or A.Text(texture) or "Interface\\Icons\\INV_Misc_QuestionMark"
             end
-            A.Rules.Observe(data.spellId, data.name, data.icon)
-            auras[#auras + 1] = {name = A.Text(data.name), id = A.Number(data.spellId), icon = texture,
+            auras[#auras + 1] = {icon = texture,
                 expires = expires, count = A.Number(data.applications) or 0}
         end
     end
     record.auras = auras
-    -- A visible personal harmful aura is evidence even when the combat log is unavailable.
-    if #auras > 0 and A.Bool(A.Call(UnitAffectingCombat, "player")) == true then
-        A.attacked[record.guid] = true
-    end
+
 end
 
 local function icon(record, index)
@@ -187,11 +192,6 @@ local function icon(record, index)
     f.count = text(f, 9); f.count:SetPoint("BOTTOMRIGHT")
     record.frame.icons[index] = f
     return f
-end
-
--- Secondary layering only. The chosen rule target is explicitly placed in front.
-function A.Better(a, b)
-    return a.guid < b.guid
 end
 
 function A.LevelColor(level)
@@ -213,6 +213,20 @@ function A.LevelColor(level)
     return .25, .75, .25
 end
 
+local function drawHealth(f, record, health, maximum, fraction)
+    if record.privateHealth then
+        f.bar:SetMinMaxValues(0, maximum); f.bar:SetValue(health)
+        local curve = CurveConstants and CurveConstants.ScaleTo100
+        local percent = curve and A.Call(UnitHealthPercent, record.unit, true, curve)
+        if A.Secret(percent) or A.Number(percent) then
+            f.percent:SetFormattedText("%.0f%%", percent)
+        else f.percent:SetText("") end
+    else
+        f.bar:SetMinMaxValues(0, 1); f.bar:SetValue(fraction or 0)
+        f.percent:SetText(fraction and math.floor(fraction * 100 + .5) .. "%" or "?")
+    end
+end
+
 local function render(record, now)
     local unit, f = record.unit, record.frame
     local guid = unit and A.Text(A.Call(UnitGUID, unit))
@@ -222,7 +236,6 @@ local function render(record, now)
     -- Protected health can go directly to display APIs; missing data cannot.
     if not guid or not (A.Secret(health) or hp) or not (A.Secret(maximum) or max) then
         if record.native then A.Call(record.native.SetAlpha, record.native, record.alpha or 1) end
-        record.priority = false
         f:ClearAllPoints(); f:SetAllPoints(record.bounds)
         f:Hide(); return false
     end
@@ -232,12 +245,6 @@ local function render(record, now)
     end
     -- Rebind safely if Blizzard replaces a pooled unit frame.
     if record.plate.UnitFrame ~= record.native then f:Hide(); return false end
-    -- Public personal threat replaces combat-log evidence on restricted clients.
-    if not A.attacked[guid] and not A.CombatLogAvailable() and
-        A.Bool(A.Call(UnitAffectingCombat, "player")) == true and
-        A.Number(A.Call(UnitThreatSituation, "player", unit)) then
-        A.attacked[guid] = true
-    end
     local scale = A.Number(A.Call(record.plate.GetEffectiveScale, record.plate))
     local uiScale = A.Number(A.Call(UIParent.GetEffectiveScale, UIParent)) or 1
     if scale and scale > 0 then
@@ -245,20 +252,9 @@ local function render(record, now)
     end
     f:SetAlpha(A.Number(A.Call(record.plate.GetAlpha, record.plate)) or 1)
     record.native:SetAlpha(0)
-    record.health = hp and max and max > 0 and math.max(0, hp) or math.huge
-    record.fraction = hp and max and max > 0 and math.max(0, math.min(1, hp / max)) or 2
+    local fraction = hp and max and max > 0 and math.max(0, math.min(1, hp / max)) or nil
     record.privateHealth = privateHealth
-    if privateHealth then
-        f.bar:SetMinMaxValues(0, maximum); f.bar:SetValue(health)
-        local curve = CurveConstants and CurveConstants.ScaleTo100
-        local percent = curve and A.Call(UnitHealthPercent, unit, true, curve)
-        if A.Secret(percent) or A.Number(percent) then
-            f.percent:SetFormattedText("%.0f%%", percent)
-        else f.percent:SetText("") end
-    else
-        f.bar:SetMinMaxValues(0, 1); f.bar:SetValue(record.fraction <= 1 and record.fraction or 0)
-        f.percent:SetText(record.fraction <= 1 and math.floor(record.fraction * 100 + .5) .. "%" or "?")
-    end
+    drawHealth(f, record, health, maximum, fraction)
     local denied = A.Bool(A.Call(UnitIsTapDenied, unit)) == true
     local r, g, b, border = .85, .12, .12, 1
     if denied then r, g, b, border = .55, .55, .55, .025
@@ -268,16 +264,15 @@ local function render(record, now)
         r, g, b, border = 1, .82, 0, .025
     end
     f.bar:SetStatusBarColor(r, g, b)
-    record.borderShade = border
-    f.name:SetText((A.Text(A.Call(UnitName, unit)) or "") .. (denied and " [CLAIMED]" or ""))
+    local name = A.Text(A.Call(UnitName, unit))
+    f.name:SetText((name or "") .. (denied and " [CLAIMED]" or ""))
     local level = A.Number(UnitLevel(unit))
-    f.level:SetText(level == -1 and "Lv. ??" or (level and level > 0 and "Lv. " .. level or "Lv. ?"))
+    f.level:SetText(level == -1 and "??" or (level and level > 0 and tostring(level) or "?"))
     f.level:SetTextColor(A.LevelColor(level))
-    -- Measure only our own text; center the complete name/level group, not the bar width.
+    -- The name stays centered above the bar; the level has its own square.
     local nameWidth = A.Number(A.Call(f.name.GetStringWidth, f.name)) or 0
-    local levelWidth = A.Number(A.Call(f.level.GetStringWidth, f.level)) or 0
-    f.header:SetWidth(nameWidth + 6 + levelWidth)
-    record.selected = A.Text(A.Call(UnitGUID, "target")) == record.guid
+    f.header:SetWidth(nameWidth)
+    local selected = A.Text(A.Call(UnitGUID, "target")) == record.guid
     for i = #record.auras, 1, -1 do
         if record.auras[i].expires > 0 and record.auras[i].expires <= now then table.remove(record.auras, i) end
     end
@@ -295,55 +290,37 @@ local function render(record, now)
         child.count:SetText(aura.count > 1 and aura.count or ""); child:Show()
     end
     for i = count + 1, #f.icons do f.icons[i]:Hide() end
-    local loot, slay = A.QuestLoot.GetIcons(record.guid, now)
-    f.questBag:SetTexture(loot); f.questBag:SetShown(loot ~= nil)
-    f.questKill:SetTexture(slay); f.questKill:SetShown(slay ~= nil)
-    f.questKill:ClearAllPoints()
-    f.questKill:SetPoint("RIGHT", f.bar, "LEFT", loot and -22 or -4, 0)
-    f:Show(); return true
+    local knife = A.QuestKills.GetTexture(record.guid, name, now)
+    f.questKill:SetTexture(knife); f.questKill:SetShown(knife ~= nil)
+    -- Keep the requested 2x base height. All geometry belongs to this addon;
+    -- Blizzard still owns overlap and click ordering between different mobs.
+    local height = A.Number(A.Call(record.bounds.GetHeight, record.bounds)) or 0
+    f:ClearAllPoints()
+    f:SetPoint("BOTTOMLEFT", record.bounds, "BOTTOMLEFT", 0, 0)
+    f:SetPoint("TOPRIGHT", record.bounds, "TOPRIGHT", 0, height)
+    local badgeSize = math.max(16, height * 2)
+    f.levelBadge:SetSize(badgeSize, badgeSize)
+    local borderSize = selected and 2 or 1
+    if record.borderSize ~= borderSize then
+        f:SetBackdrop({bgFile = WHITE, edgeFile = WHITE, edgeSize = borderSize})
+        f:SetBackdropColor(.025, .025, .025, .95)
+        f.bar:ClearAllPoints()
+        f.bar:SetPoint("TOPLEFT", borderSize, -borderSize)
+        f.bar:SetPoint("BOTTOMRIGHT", -borderSize, borderSize)
+        record.borderSize = borderSize
+    end
+    f:SetBackdropBorderColor(border, border, border, 1)
+    f:Show(); bindClicks(record)
+    return true
 end
 
 function A.Update(refreshAuras, changedUnit)
     if not A.ready then return end
-    local list, now = {}, GetTime()
-    A.privateHealthActive = false
+    local now = GetTime()
     for _, record in pairs(A.units) do
         if refreshAuras and (not changedUnit or changedUnit == record.unit or
             A.Bool(A.Call(UnitIsUnit, changedUnit, record.unit)) == true) and
             record.unit and A.Text(A.Call(UnitGUID, record.unit)) == record.guid then scan(record) end
-        if render(record, now) then
-            list[#list + 1] = record
-            if record.privateHealth then A.privateHealthActive = true end
-        end
+        render(record, now)
     end
-    table.sort(list, A.Better)
-    A.priorityTarget = A.Rules.Choose(list, now)
-    for rank, record in ipairs(list) do
-        local level = 30 + (#list - rank) * 8
-        local priority = record == A.priorityTarget
-        if priority then level = 30 + #list * 8 end
-        record.frame:SetFrameLevel(level); record.frame.bar:SetFrameLevel(level + 1)
-        record.frame.header:SetFrameLevel(level + 2)
-        if record.auraContainer then record.auraContainer:SetFrameLevel(level + 2) end
-        for _, child in ipairs(record.frame.icons) do child:SetFrameLevel(level + 2) end
-        record.priority = priority
-        -- Measure only our UIParent-based bounds. Bound click points follow this owned rectangle.
-        local height = A.Number(A.Call(record.bounds.GetHeight, record.bounds)) or 0
-        record.frame:ClearAllPoints()
-        record.frame:SetPoint("BOTTOMLEFT", record.bounds, "BOTTOMLEFT", 0, 0)
-        record.frame:SetPoint("TOPRIGHT", record.bounds, "TOPRIGHT", 0, height * (priority and 3 or 1))
-        local borderSize = (record.selected or priority) and 2 or 1
-        if record.borderSize ~= borderSize then
-            record.frame:SetBackdrop({bgFile = WHITE, edgeFile = WHITE, edgeSize = borderSize})
-            record.frame:SetBackdropColor(.025, .025, .025, .95)
-            record.frame.bar:ClearAllPoints()
-            record.frame.bar:SetPoint("TOPLEFT", borderSize, -borderSize)
-            record.frame.bar:SetPoint("BOTTOMRIGHT", -borderSize, borderSize)
-            record.borderSize = borderSize
-        end
-        local shade = record.borderShade
-        record.frame:SetBackdropBorderColor(shade, shade, shade, 1)
-        bindClicks(record)
-    end
-    if A.Settings then A.Settings.Tick(now) end
 end

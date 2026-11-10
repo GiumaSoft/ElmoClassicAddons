@@ -1,1 +1,0 @@
--- Data-only settings bridge for ElmoLFG. No interface, events, commands or timers.

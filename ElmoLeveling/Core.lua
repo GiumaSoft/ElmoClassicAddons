@@ -11,6 +11,7 @@ frame:SetScript("OnEvent", function(_, event, unit, ...)
         end
         A.Init()
         A.Mobs.Init()
+        A.UI.RegisterOptions()
         A.Upgrades.HookBags()
         SLASH_CLASSICLEVELINGFOREVER1 = "/clf"
         SLASH_CLASSICLEVELINGFOREVER2 = "/classiclevelingforever"

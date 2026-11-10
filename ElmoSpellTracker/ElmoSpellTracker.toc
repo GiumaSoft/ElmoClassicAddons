@@ -3,7 +3,8 @@
 ## Title: ElmoSpellTracker
 ## Notes: Track used abilities, cooldowns and insufficient mana, energy or rage in a compact bar.
 ## Author: Giuseppe
-## Version: 1.0.2
+## Version: 1.0.3
+## X-Curse-Project-ID: 1778283
 ## SavedVariablesPerCharacter: ElmoSpellTrackerDB
 
 Migration.lua

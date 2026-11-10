@@ -11,25 +11,6 @@ HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 STAGE=ROOT/'.build'/'forever'
 
-def load_dungeon():
-    vm=LuaRuntime(unpack_returned_tuples=True)
-    for name in ['wow_mock.lua','journal_mock.lua']:vm.execute((HERE/'dungeon'/name).read_text())
-    vm.execute('''
-    GetNumQuestLogEntries=nil;GetQuestLogTitle=nil;GetQuestLogIndexByID=nil
-    C_QuestLog={GetNumQuestLogEntries=function()return 1 end,
-        GetInfo=function(i)return {questID=96393,isHeader=false}end,
-        IsQuestFlaggedCompleted=function(id)return id==96391 end}
-    C_Map={GetMapInfo=function(id)return {name=id==1426 and 'Dun Morogh' or 'Map '..id}end}
-    C_TooltipInfo={GetHyperlink=function()return {lines={{leftText='Equip: +18 Spell Power'}}}end}
-    ''')
-    ns=vm.table();loader=vm.eval('function(s,n,ns)assert(loadstring(s,"@"..n))("ElmoDungeonLoot",ns)end')
-    addon=STAGE/'ElmoDungeonLoot'
-    for name in (addon/'ElmoDungeonLoot.toc').read_text().splitlines():
-        if name.endswith('.lua'):loader((addon/name).read_text(),name,ns)
-    vm.globals().CD=ns
-    vm.execute("CD.frame:GetScript('OnEvent')(CD.frame,'ADDON_LOADED','ElmoDungeonLoot')")
-    return vm
-
 class ForeverTests(unittest.TestCase):
     def test_all_packages_and_versions(self):
         for client,interface in [('classic',11509),('forever',16001)]:
@@ -46,72 +27,6 @@ class ForeverTests(unittest.TestCase):
                 vm=LuaRuntime()
                 compile=vm.eval('function(s,n)assert(loadstring(s,n))end')
                 for file in path.rglob('*.lua'):compile(file.read_text(),str(file))
-
-    def test_forever_catalog_and_cold_cache_stats(self):
-        vm=load_dungeon()
-        vm.execute('''
-        assert(#CD.Catalog.order==35 and CD.Catalog.meta.client=='forever')
-        local item=CD.Items.Read(270256)
-        assert(item.name=="Durgen's Crescent Axe" and item.stats.str==4 and item.dps==12.3)
-        assert(item.weaponSpeed==2.4 and item.loc=='INVTYPE_WEAPONMAINHAND')
-        assert(CD.Search.Matches(item,CD.Search.Parse('axe, str >= 4, dps >= 12, req <= 13')))
-        assert(not CD.Search.Matches(item,CD.Search.Parse('str >= 5')))
-        assert(CD.Catalog.dungeons['hall-of-thanes'] and CD.Catalog.dungeons['city-of-dalaran'])
-        assert(CD.Items.Read(271095).stats.sp==18)
-        for _,d in pairs(CD.Catalog.dungeons)do
-            for _,group in ipairs(d.bosses)do
-                assert(group.kind~='quest' and group.kind~='trash')
-                for _,drop in ipairs(group.loot)do assert(CD.Catalog.items[drop.id])end
-            end
-        end
-        ''')
-
-    def test_modern_quest_log_and_chains(self):
-        vm=load_dungeon()
-        vm.execute('''
-        local Q=CD.Quests
-        assert(Q.InLog(96393) and not Q.InLog(214))
-        local q=Q.Get(96393)
-        assert(q.previousAny[1]==96391 and Q.Get(96391))
-        assert(#Q.Prerequisites(q)>0)
-        assert(Q.State(q)=='In quest log')
-        assert(Q.GiverLines(q)[2]:find('Dun Morogh',1,true))
-        assert(Q.GiverLines(q)[2]:find('64.9, 58.5',1,true))
-        assert(Q.ForCharacter(q,{faction='Horde',raceID=2,classID=1})==false)
-        assert(Q.ForCharacter({races=4294967296,classes=0},{faction='Alliance',raceID=33,classID=1}))
-        ''')
-
-    def test_forever_all_dungeons_classes_and_factions_render(self):
-        vm=load_dungeon()
-        vm.execute('''
-        CD.UI.Create()
-        for _,faction in ipairs({'Alliance','Horde'})do
-            MOCK.faction=faction;MOCK.race=faction=='Alliance' and 3 or 2
-            for _,class in ipairs({'WARRIOR','PALADIN','HUNTER','ROGUE','PRIEST','SHAMAN','MAGE','WARLOCK','DRUID'})do
-                MOCK.class=class
-                for _,slug in ipairs(CD.Catalog.order)do
-                    CD.db.lastDungeon=slug;CD.UI.Render(true)
-                    for _,q in ipairs(CD.Quests.List(CD.Catalog.dungeons[slug]))do
-                        CD.Quests.State(q);CD.Quests.GiverLines(q);CD.Quests.Prerequisites(q)
-                    end
-                end
-            end
-        end
-        ''')
-
-    def test_forever_item_tooltip_search_and_nil_return_positions(self):
-        vm=load_dungeon()
-        vm.execute('''
-        local a,b,c,d=CD.Call(function()return nil,nil,nil,7 end)
-        assert(a==nil and b==nil and c==nil and d==7)
-        MOCK.items[271095]={name='Fang of Magmatus',loc='INVTYPE_WEAPONMAINHAND',level=13,
-            classID=2,subclassID=15,stats={ITEM_MOD_INTELLECT_SHORT=4},usable=true}
-        local item=CD.Items.Read(271095)
-        assert(item.live and item.stats.sp==18 and item.stats.int==4)
-        CD.UI.Create();CD.db.lastDungeon='hall-of-thanes';CD.UI.Render(true)
-        CD.db.lastDungeon='blackmaw-hold';CD.UI.Render(true)
-        assert(CD.UI.searchEmpty:GetText()=='No drop table recorded for this dungeon.')
-        ''')
 
     def test_forever_nameplates_and_restricted_fallback(self):
         sys.path.insert(0,str(HERE/'ElmoPlater'))
@@ -141,11 +56,8 @@ class ForeverTests(unittest.TestCase):
         C_UnitAuras.GetAuraDataByIndex=function()return SECRET end
         A.Update(true);assert(not record.missing and not record.aurasKnown)
         C_UnitAuras.GetAuraDataByIndex=aura
-        MOCK.logRestricted=true;A.RegisterCombatLog()
+        assert(A.RegisterCombatLog==nil and A.CombatLog==nil)
         assert(not A.frame.events.COMBAT_LOG_EVENT_UNFILTERED)
-        MOCK.logRestricted=false;A.RegisterCombatLog()
-        assert(not A.frame.events.COMBAT_LOG_EVENT_UNFILTERED)
-        MOCK.logRestricted=true;A.CombatLog(1,SECRET,false,SECRET,nil,nil,nil,SECRET)
         A.Remove('nameplate9');assert(plate.UnitFrame.alpha==1)
         assert(MOCK.restrictedReads==0 and MOCK.foreignWrites==0 and MOCK.hookAttempts==0)
         ''')

@@ -158,6 +158,7 @@ function A.Initialize()
         end
     end
     A.UI.Create()
+    A.UI.RegisterOptions()
     SLASH_CLASSICSPELLSTRACKER1="/cst"
     SLASH_CLASSICSPELLSTRACKER2="/classicspellstracker"
     SLASH_CLASSICSPELLSTRACKER3="/cct"

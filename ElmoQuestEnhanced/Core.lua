@@ -1,4 +1,4 @@
-local _, A = ...
+local addonName, A = ...
 ElmoQuestEnhanced = A
 local states, legacyLog, legacySignature = {}, nil, nil
 local accepted = {}
@@ -109,7 +109,14 @@ local function snapshot(id, info)
         if not secret(row.text) and row.text == "" then -- Native empty rows are not objectives.
         elseif not wording or not text(row.type) or finished == nil then return
         else
-            objectives[i] = {text = wording, done = finished}
+            local kind = text(row.type)
+            local fulfilled, required = number(row.numFulfilled), number(row.numRequired)
+            if (kind ~= "monster" and kind ~= "item") or not fulfilled or not required or required <= 0 or
+                fulfilled > required or fulfilled % 1 ~= 0 or required % 1 ~= 0 or
+                (not finished and fulfilled == required) then
+                fulfilled, required = nil, nil
+            end
+            objectives[i] = {text = wording, done = finished, fulfilled = fulfilled, required = required}
             count = count + 1; allDone = allDone and finished
         end
     end
@@ -124,7 +131,8 @@ local function update(id, quest)
         state = {incomplete = newlyAccepted or not quest.complete, reported = not newlyAccepted and quest.complete,
             objectives = {}, count = quest.count}
         for i, row in pairs(quest.objectives) do
-            state.objectives[i] = {incomplete = newlyAccepted or not row.done, reported = not newlyAccepted and row.done}
+            state.objectives[i] = {incomplete = newlyAccepted or not row.done, reported = not newlyAccepted and row.done,
+                progress = row.fulfilled, required = row.required}
         end
         states[id] = state -- First observation is a baseline, including after login/reload.
         accepted[id] = nil
@@ -134,22 +142,34 @@ local function update(id, quest)
     for i = 1, quest.slots do
         local row = quest.objectives[i]
         if row then
-            local previous = state.objectives[i] or {incomplete = not row.done, reported = row.done}
+            local previous = state.objectives[i] or {incomplete = not row.done, reported = row.done,
+                progress = row.fulfilled, required = row.required}
             if not row.done then previous.incomplete = true end
+            local completionReport = state.count > 1 and row.done and A.db.reportObjectives
             if state.count > 1 and row.done and previous.incomplete and not previous.reported then
-                previous.reported = announce("[ElmoQuestEnhanced] Objective complete: " .. row.text .. " (" .. quest.title .. ")")
+                previous.reported = not A.db.reportObjectives or
+                    announce("[ElmoQuestEnhanced] Objective complete: " .. row.text .. " (" .. quest.title .. ")")
+            end
+            if row.fulfilled and row.required then
+                local increased = previous.progress and previous.required == row.required and row.fulfilled > previous.progress
+                local consumed = not increased or not A.db.reportProgress or completionReport
+                if not consumed then
+                    consumed = announce("[ElmoQuestEnhanced] Objective progress: " .. row.text .. " (" ..
+                        (row.required - row.fulfilled) .. " remaining) (" .. quest.title .. ")")
+                end
+                if consumed then previous.progress, previous.required = row.fulfilled, row.required end
             end
             state.objectives[i] = previous
         end
     end
     if not quest.complete then state.incomplete = true end
     if quest.complete and state.incomplete and not state.reported then
-        state.reported = announce("[ElmoQuestEnhanced] Quest complete: " .. quest.title)
+        state.reported = not A.db.reportQuests or announce("[ElmoQuestEnhanced] Quest complete: " .. quest.title)
     end
 end
 
 function A.Scan()
-    if not ready or scanning then return end
+    if not ready or not A.db or scanning then return end
     scanning = true
     for id, info in pairs(questLog() or {}) do
         local quest = snapshot(id, info)
@@ -159,7 +179,10 @@ function A.Scan()
 end
 
 frame:SetScript("OnEvent", function(_, event, id, second)
-    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then ready = true
+    if event == "ADDON_LOADED" then
+        if id == addonName then A.InitializeSettings() end
+        return
+    elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then A.InitializeSettings(); ready = true
     elseif event == "PLAYER_LEAVING_WORLD" then ready = false; return
     elseif event == "QUEST_REMOVED" or event == "QUEST_TURNED_IN" then
         id = number(id); if id then states[id], accepted[id] = nil, nil end
@@ -175,8 +198,8 @@ frame:SetScript("OnUpdate", function(_, dt)
     elapsed = elapsed + dt
     if elapsed >= .5 then elapsed = 0; A.Scan() end
 end)
-for _, event in ipairs({"PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "QUEST_LOG_UPDATE",
+for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "QUEST_LOG_UPDATE",
     "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN", "QUEST_WATCH_UPDATE", "QUEST_AUTOCOMPLETE",
-    "QUEST_DATA_LOAD_RESULT", "UNIT_QUEST_LOG_CHANGED", "QUEST_LOG_CRITERIA_UPDATE", "CRITERIA_UPDATE"}) do
+    "QUEST_DATA_LOAD_RESULT", "UNIT_QUEST_LOG_CHANGED", "QUEST_LOG_CRITERIA_UPDATE", "CRITERIA_UPDATE", "BAG_UPDATE_DELAYED"}) do
     pcall(frame.RegisterEvent, frame, event)
 end

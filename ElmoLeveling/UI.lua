@@ -98,6 +98,45 @@ function U.ToggleMobs()
     U.RefreshMobs()
 end
 
+function U.RegisterOptions()
+    if U.optionsCategory or not (Settings and Settings.RegisterCanvasLayoutCategory) then return end
+    local p = CreateFrame("Frame", nil, UIParent)
+    U.optionsPanel = p; p:Hide()
+    local title = label(p, 16, "ElmoLeveling"); title:SetPoint("TOPLEFT", 16, -16)
+    local description = label(p, 12, "XP, bag value, equipment upgrades and kill history.")
+    description:SetPoint("TOPLEFT", 16, -48)
+    local function check(value, y, change)
+        local c = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
+        c:SetPoint("TOPLEFT", 16, y); c:SetSize(26, 26)
+        local caption = label(c, 12, value); caption:SetPoint("LEFT", c, "RIGHT", 4, 0)
+        c:SetScript("OnClick", function(self) change(self:GetChecked() == true) end)
+        return c
+    end
+    p.visible = check("Show tracker", -80, A.SetVisible)
+    p.locked = check("Lock tracker position", -114, A.SetLocked)
+    p.expanded = check("Show kill history", -148, function(value)
+        A.db.mobExpanded = value; U.RefreshMobs()
+    end)
+    local function action(value, y, fn)
+        local b = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+        b:SetPoint("TOPLEFT", 16, y); b:SetSize(240, 26); b:SetText(value)
+        b:SetScript("OnClick", fn); return b
+    end
+    p.center = action("Center and show tracker", -196, function()
+        A.Command("center"); p.visible:SetChecked(true)
+    end)
+    p.reset = action("Reset XP and session", -234, A.Reset)
+    p.clear = action("Clear kill history", -272, function()
+        A.Mobs.ClearHistory(); U.mobOffset = 0; U.RefreshMobs()
+    end)
+    p:SetScript("OnShow", function()
+        p.visible:SetChecked(not A.db.hidden); p.locked:SetChecked(A.db.locked)
+        p.expanded:SetChecked(A.db.mobExpanded == true)
+    end)
+    U.optionsCategory = Settings.RegisterCanvasLayoutCategory(p, "ElmoLeveling")
+    Settings.RegisterAddOnCategory(U.optionsCategory)
+end
+
 function U.CreateMobs()
     U.mobOffset, U.mobRows = 0, {}
     U.mobToggle = button(U.panel, "Kills/min: 0 [+]", -10, U.ToggleMobs)

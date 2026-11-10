@@ -1,15 +1,27 @@
-# ElmoQuestEnhanced 1.1.0
+# ElmoQuestEnhanced 1.2.0
 
-Reports only your quest completions to your current group:
+Reports your quest completions and optional kill/item progress to your current group.
+Open **Options > AddOns > ElmoQuestEnhanced**, or type `/eqe` or
+`/elmoquestenhanced`, to configure three independent checkboxes:
 
-- A completed quest produces one `Quest complete: <quest name>` message.
-- For quests with multiple objectives, each completed objective also produces
-  one `Objective complete: <native objective text> (<quest name>)` message.
-- The destination is party, raid or instance-group chat, as appropriate.
+- **Report completed quests** (on by default): one `Quest complete: <quest name>`
+  message when a quest becomes complete.
+- **Report completed objectives** (on by default): for quests with multiple
+  objectives, one `Objective complete: <native objective text> (<quest name>)`
+  message per completed objective.
+- **Report remaining objectives (kills/items)** (off by default): each observed
+  increase in a native kill/item count produces `Objective progress: <native
+  objective text> (<number> remaining) (<quest name>)`. For example, collecting
+  a second item out of five reports `2/5` and `3 remaining`. Decreasing counts
+  are silent; collecting the items again can report new progress. A completed
+  objective report replaces a progress report for that same completion when
+  both options are enabled; progress alone can report `0 remaining`.
 
-There is no UI, configuration, command, saved profile or Questie dependency.
-It does not announce ordinary progress, accepted/abandoned quests, loot or turn-in
-events. Completed quests already present on login/reload are a silent baseline.
+Settings are saved per character and apply as soon as the checkbox changes.
+The destination is party, raid or instance-group chat, as appropriate. Disabled
+reports are consumed without replaying them when reenabled. Questie is not required.
+Accepted/abandoned quests, unrelated loot and turn-in events are not announced.
+Existing completions and counts on login/reload are a silent baseline.
 Solo progress is consumed without sending or replaying messages on group join.
 Each objective is identified by quest ID and its original native index, and is
 reported once per acceptance. A newly accepted quest that is immediately ready
@@ -20,7 +32,9 @@ from the client's quest log. Text stays within the 255-byte chat limit.
 Renamed from ElmoQuestReport. Extract both folders from the package into
 `Interface/AddOns` and restart WoW. Enable ElmoQuestEnhanced in the AddOns list.
 The bundled ElmoQuestReport folder is now an inactive compatibility stub, so
-only the new addon reports completions. There are no saved settings to migrate.
+only the new addon reports completions. The former version had no saved settings
+to migrate; existing installations keep their completion reports enabled and
+must opt in to progress reports.
 If Questie's own announcements are enabled, disable those options to avoid
 receiving the same completion from both addons. Questie settings are not changed.
 
@@ -32,7 +46,8 @@ quest data that arrives after the last event. No combat log is accessed.
 
 References: [Questie's announcements](https://github.com/Questie/Questie/blob/master/Modules/QuestieAnnounce.lua),
 [Forever quest API](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua),
-[Classic Era quest API](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua).
+[Classic Era quest API](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua),
+[Blizzard Settings registration](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_Settings_Shared/Blizzard_Settings.lua).
 This is an independent implementation; no Questie code or assets are bundled.
 
 Validation uses Lua 5.1 with simulated APIs in

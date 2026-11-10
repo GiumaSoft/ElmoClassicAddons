@@ -1,0 +1,11 @@
+## Interface: 11509
+## Title: ElmoRare
+## Notes: Nearby rare alerts from nameplates, target and mouseover, with sound and tooltip.
+## Author: Giuseppe
+## Version: 1.0.0
+## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## SavedVariablesPerCharacter: ElmoRareDB
+
+Core.lua
+UI.lua
+Settings.lua

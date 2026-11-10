@@ -1,104 +1,57 @@
 # Sources and validation
 
-The editor's condition-type/operator/value rows, AND/OR and grouping concepts
-were reviewed against [TellMeWhen's condition editor](https://github.com/ascott18/TellMeWhen/blob/master/Components/Core/Conditions/Config.lua)
-and [condition metadata specification](https://github.com/ascott18/TellMeWhen/blob/master/Documentation/Conditions/ConditionDataSpecification.txt).
-No TellMeWhen runtime or assets are copied. ElmoPlater evaluates validated data
-with a small boolean evaluator; saved settings are never compiled as Lua.
-Ordered first-match rules are separate from the conditions inside each rule.
-
-Primary Classic Era UI/API snapshot, Interface 11509:
+Classic Era UI/API snapshot, Interface 11509:
 https://github.com/Gethe/wow-ui-source/tree/4192ac60067fc55566182291bc67c85dd9b6794d/Interface/AddOns
 
-Primary Forever UI/API snapshot, Interface 16001:
-https://github.com/Gethe/wow-ui-source/tree/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns
+Forever 1.60.1 build 70862 UI/API snapshot, Interface 16001:
+https://github.com/Gethe/wow-ui-source/tree/9dc84f0d3bba/Interface/AddOns
 
 The native pooled UnitFrame owns HealthBarsContainer.healthBar. Addon-owned
-UIParent bounds follow that region. Only owned bounds are measured. Artwork
-normalizes effective scale and frame level. Base bars grow upward to twice the
-native health-bar height; the chosen engaged mob doubles that base again.
-Global dimensions/stacking are unchanged.
+UIParent bounds follow that region; only owned bounds/text are measured.
+Bars grow upward to twice the native health-bar height. Explicit frame-level
+sorting, GUID ordering and priority-dependent geometry have been removed.
+Normal parent/child frame ordering draws each bar's own elements. The level
+badge uses Blizzard's rounded tooltip border on an owned, non-interactive frame
+next to the health rectangle; it is excluded from the click region. Native overlap
+and click ordering between mobs remain engine-controlled.
 
-[Plater](https://github.com/Tercioo/Plater-Nameplates/blob/master/Plater.lua)
-demonstrates owned hit-test frames and guarded native bindings. ElmoPlater binds
-SetHitTestPoints only when CanChangeHitTestPoints permits it, then changes its
-owned reference frame. Cleanup reconstructs Blizzard's published anchors without
-calling the restricted getter. Native containing bounds and click overlap remain
-engine-controlled. Personal debuff icons are above the bar, outside the click
-rectangle. The separate priority anchor has been removed.
+Guarded SetHitTestPoints calls bind the owned rectangle only when
+CanChangeHitTestPoints permits it. Cleanup reconstructs Blizzard's published
+anchors without calling the restricted getter. Native containing bounds still
+clip the hit region. Artwork and debuff icons do not intercept mouse input.
 
-Where supported, CustomAuraContainerTemplate displays HARMFUL|PLAYER above each
-owned bar. Its initialization callback registers icon, duration text and stack
-text with Blizzard; subsequent updates never inspect or modify adopted buttons.
-Only the public container is bound to a nameplate token, scaled and layered.
-It is disabled when the nameplate is removed. API reference (Forever build 70790):
-https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_AuraContainer/Blizzard_CustomAuraContainer.lua
-https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_AuraContainer/Blizzard_CustomAuraButton.lua
+CustomAuraContainerTemplate displays HARMFUL|PLAYER above each owned bar:
+https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_AuraContainer/Blizzard_CustomAuraContainer.lua
+https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_AuraContainer/Blizzard_CustomAuraButton.lua
 
-C_Secrets.ShouldAurasBeSecret gates all direct aura reads, including diagnostics.
-While restricted, aurasKnown=false prevents the rule engine from inferring missing
-debuffs; Blizzard continues updating the display. Outside restrictions,
-C_UnitAuras.GetUnitAuras uses HARMFUL|PLAYER, with indexed and UnitDebuff fallbacks
-on older clients. Readable aura scans and public combat logs populate a per-character
-observed-debuff catalog. Damage, misses and personal harmful auras mark engaged
-mobs. GUIDs identify records only. The 0.1-second tick updates priority and expiry;
-aura events scan the changed unit, including aliases such as target/nameplate2.
-Combat transitions refresh aura readability. Debuff rules require public usability/resource and
-cooldown data. GetSpellCooldownDuration(..., true) ignores GCD; the numeric fallback
-compares the spell cooldown with spell 61304's GCD. Charges are checked separately.
-Unknown data fails closed rather than fabricating a usable spell or missing aura.
+Its initialization callback registers icon, duration and application-count text;
+subsequent updates never inspect or change adopted buttons. The public container
+is bound to the nameplate token, scaled and disabled during pool cleanup. When
+it is available, raw aura reads are unnecessary and skipped. Otherwise,
+C_Secrets.ShouldAurasBeSecret gates batch/indexed/UnitDebuff legacy readers.
+Aura events refresh the changed unit, including target/nameplate aliases.
+The 0.1-second update maintains the display and legacy aura expiry. No aura
+learning, combat-log subscription, threat or spell readiness checks remain.
 
-Forever's CombatLogDocumentation marks COMBAT_LOG_EVENT_UNFILTERED as restricted:
-https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/CombatLogDocumentation.lua
-Interface 16000-16999 never registers or unregisters that event, regardless of
-IsCombatLogRestricted or getter availability. Other clients unregister it only
-after a registration. Public UnitThreatSituation("player", unit), including status
-0, and personal harmful auras provide engagement evidence while the player is in
-combat. Secret threat values are ignored. GetBuildInfo's interface distinguishes
-Forever from Classic Era; WOW_PROJECT_MAINLINE alone does not.
+Secret HP and max HP go directly to StatusBar:SetMinMaxValues/SetValue. Secret
+percentages go to FontString:SetFormattedText through UnitHealthPercent with
+CurveConstants.ScaleTo100; no comparison or custom curve consumes those values:
+https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleStatusBarAPIDocumentation.lua
+https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleFontStringAPIDocumentation.lua
 
-`scripts/tests/ElmoPlater/test_rules.py` exercises A/B/C multi-debuff decisions,
-explicit order including AoE, explicit lowest-health rules, resources, own CD,
-GCD/charges, refresh/count limits, AND/OR/grouping, restricted values, editor
-save/cancel, dropdown paging, adding multiple independent rules, duplication,
-ordering and legacy migration. Spellbook options use capability-checked modern
-C_SpellBook readers or Classic spell-tab readers; tests cover both paths. `test_prototype.py` checks geometry isolation,
-attacked-only enlargement, native containment, debuff rows above the bar,
-expiry, colours, and restoration. Both use Lua 5.1 fixtures, not the
-native engine. `scripts/tests/test_forever.py` adds modern/restricted API checks.
-`test_forever_combat_log.py` rejects both registration and removal of the combat-log
-event on Forever, including failures that do not throw through pcall, and checks
-public-threat/personal-aura fallback, secret threat and end-of-combat cleanup.
-`test_secret_health.py` checks that protected health/max-health values go directly
-to StatusBar:SetMinMaxValues/SetValue and protected percentages go to
-FontString:SetFormattedText using UnitHealthPercent with CurveConstants.ScaleTo100.
-These display APIs accept secret arguments on Forever. Such values are never
-compared for priority. Readable debuff rules without health constraints remain
-eligible; health rules and unreadable aura conditions cannot match.
-https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleStatusBarAPIDocumentation.lua
-https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleFontStringAPIDocumentation.lua
-Live graphical rendering and overlap targeting have not been certified by mocks.
+QuestKills.lua reads native active quest IDs and C_QuestLog.GetQuestObjectives:
+https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua
+Only unfinished monster objectives matching Blizzard's localized
+QUEST_MONSTERS_KILLED wording qualify. Classic suffix and Forever prefix counters
+are supported. Public creature names must match exactly; item and interaction
+objectives are excluded. The texture is WoW's INV_Weapon_ShortBlade_05. No
+Questie data or assets are used. All plates share a half-second quest snapshot.
+Quest events invalidate it; legacy header discovery restores headers/selection.
 
-The optional quest markers read QuestieTooltips.lookupByKey["m_<npcID>"],
-the same accepted-objective registry used by Questie's own nameplate module:
-https://github.com/Questie/Questie/blob/master/Modules/QuestieNameplate.lua
-Only incomplete kill/slay and item/loot objectives in the player's current quest
-log qualify. Questie's objective icon type takes precedence over a generic type,
-so talk/interact objectives are not mistaken for kills. The two icons may coexist.
-Native quest-log indices take precedence over Questie's accepted-quest registry
-when available. This does not scan or rewrite tooltip frames or infer item drops
-from a generic quest-related flag. Owned health-bar regions reference Questie's
-installed slay/loot textures, respecting profile overrides and the pfquest theme;
-no Questie assets are bundled. Quest events invalidate a
-half-second per-creature cache; the existing update tick catches delayed Questie
-updates. test_quest_loot.py covers independent kill and item progress, abandonment,
-Questie textures/themes, missing/private data, legacy/modern log indices, pooled
-cleanup and nonoverlapping placement at normal and priority heights. Questie
-remains optional.
-
-`scripts/tests/ElmoPlater/test_dynamic_health.py` verifies schema-v1 migration
-without duplicating rules, editable strict percentage thresholds, health/debuff
-reordering, disabled/deleted rules, no hidden HP fallback, absolute-HP selection
-restricted to attacked mobs, health rules without spell/resource dependencies,
-additional conditions, unknown data and manager controls. The normal secondary
-layering uses GUID only; all health priority comes from the ordered rule list.
+The Lua 5.1 tests in scripts/tests/ElmoPlater cover geometry isolation, fixed 2x
+height, native click containment, colours, header/debuff layout, pool cleanup,
+private health and aura display, native quest markers and settings retirement.
+The reduced-runtime regression rejects combat-log registration/reads, threat,
+spellbook access and explicit SetFrameLevel calls on both clients. Native options
+are also checked by scripts/tests/test_options.py. These are simulated checks;
+actual C++ rendering and targeting are not certified by mocks.

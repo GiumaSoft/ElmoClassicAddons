@@ -1,7 +1,7 @@
 local _,A=...
 _G.ElmoSpellTracker=A
 _G.ClassicCooldownTracker=A -- compatibility for existing integrations
-A.version="1.0.2"
+A.version="1.0.3"
 A.DEFAULT_LIMIT=10
 A.HARD_LIMIT=12
 

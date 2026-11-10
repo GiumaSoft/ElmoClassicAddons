@@ -18,7 +18,6 @@ LEGACY_DEPENDENCIES = {
     "ElmoSpellTracker": {"classic": ["ClassicSpellsTracker", "ClassicCooldownTracker"]},
 }
 COMPATIBILITY_FOLDERS = {
-    "ElmoLFG": ("ClassicQuestLFG", "QuestLFG"),
     "ElmoQuestEnhanced": ("ElmoQuestReport",),
 }
 
@@ -41,13 +40,6 @@ def build(source, client):
     if dependencies:
         text = "## OptionalDeps: " + ", ".join(dict.fromkeys(dependencies)) + "\n" + text
     toc.write_text(text)
-    if name == "ElmoDungeonLoot" and client == "forever":
-        for filename in ("Catalog.lua", "QuestCatalog.lua"):
-            shutil.copyfile(source / (filename[:-4] + "Forever.lua"), stage / filename)
-    if name == "ElmoDungeonLoot":
-        # The package contains only its client's factual catalogues.
-        for filename in ("CatalogForever.lua", "QuestCatalogForever.lua"):
-            (stage / filename).unlink()
     if name == "ElmoLeveling":
         (stage / "Client.lua").write_text(f'local _, A = ...\nA.flavor = "{client}"\n')
     for line in text.splitlines():

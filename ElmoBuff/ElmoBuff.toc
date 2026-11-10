@@ -1,0 +1,12 @@
+## Interface: 11509
+## Title: ElmoBuff
+## Notes: Click missing-buff icons beside party portraits to rebuff that member.
+## Author: Giuseppe
+## Version: 1.0.1
+## IconTexture: Interface\Icons\Spell_Holy_WordFortitude
+## SavedVariablesPerCharacter: ElmoBuffDB
+
+Core.lua
+Spells.lua
+UI.lua
+Settings.lua

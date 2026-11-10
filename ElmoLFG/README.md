@@ -1,4 +1,8 @@
-# ElmoLFG 1.4.0
+# ElmoLFG 1.4.1
+
+## Options menu
+
+Open **Options > AddOns > ElmoLFG** for Autojoin and a button opening the complete LFG window. Activity selection, channels, announcement text, interval, group size and roles remain in that window. Opening settings never starts recruitment or sends an announcement.
 
 Find groups for active quests and Classic dungeons in Classic Era 1.15.9 and
 WoW Forever 1.60.1. Renamed from ClassicQuestLFG, with one shared implementation.
@@ -21,21 +25,18 @@ Open `/elmolfg` or `/elfg`, or click the minimap button. Existing `/qlfg`,
   posting cooldown apply to the complete outgoing message.
 
 Announcements and invitations are stopped after login or reload. Neither
-installation nor settings migration starts recruitment or sends messages.
+installation nor opening settings starts recruitment or sends messages.
 
-## Installation and previous settings
+## Installation and settings
 
-Use the package for your client and extract **all three folders** into
-`Interface/AddOns`: `ElmoLFG`, `ClassicQuestLFG` and `QuestLFG`. Restart WoW to
-discover the new addon, then enable ElmoLFG. Keep the legacy importers enabled
-for the first migration if you used an older version.
+Use the package for your client and extract the single **ElmoLFG** folder into
+`Interface/AddOns`. The former `ClassicQuestLFG` and `QuestLFG` settings importers
+are retired and are no longer included or loaded. Remove those obsolete addon
+folders when updating an older installation.
 
-The two old folders now contain only load-on-demand saved-variable importers;
-they create no windows, minimap buttons, chat handlers or timers. Their manifests
-replace the previous runtime manifests, preventing a second active interface.
-Existing ElmoLFG settings take precedence, then ClassicQuestLFG settings, then
-QuestLFG settings. Settings are saved per character in `ElmoLFGDB` and remain
-separate between Classic Era and Forever.
+Current settings remain in the per-character `ElmoLFGDB`, separately for Classic
+Era and Forever. Old saved-variable files are not loaded or imported. Opening
+the addon or its options does not start recruitment or send messages.
 
 Questie is optional. Its chat-link format is retained when Questie is active.
 Required minimap libraries are bundled, with original credits retained.

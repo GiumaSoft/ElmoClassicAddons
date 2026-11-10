@@ -278,13 +278,6 @@ function MOCK.aura(unit,id,seconds,source,count)
         sourceUnit=source or 'player',duration=seconds,expirationTime=seconds>0 and MOCK.time+seconds or 0,
         applications=count or 1}; d.auras[#d.auras+1]=a; return a
 end
-function MOCK.log(event,guid,name,source,spellID,kind)
-    ElmoPlater.CombatLog(MOCK.time,event,false,source or UnitGUID('player'),'Source',0,0,guid,name,0,0,
-        spellID or 772,'Rend',1,kind or 'DEBUFF')
-end
-function MOCK.hit(unit,source,event)
-    MOCK.log(event or 'SWING_DAMAGE',assert(UnitGUID(unit)),UnitName(unit),source)
-end
 local function contains(frame,x,y)
     local l,b,w,h=rect(frame); return w>0 and h>0 and x>=l and x<=l+w and y>=b and y<=b+h
 end

@@ -8,19 +8,7 @@ A.announcing = false
 A.recentInvites = {}
 
 function A.InitializeDB()
-    if type(ElmoLFGDB) ~= "table" then
-        local metadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
-        local load = C_AddOns and C_AddOns.LoadAddOn or LoadAddOn
-        for _, folder in ipairs({"ClassicQuestLFG", "QuestLFG"}) do
-            if type(_G[folder .. "DB"]) ~= "table" and type(metadata) == "function" and
-                type(load) == "function" and metadata(folder, "X-ElmoLFG-Legacy") == "1" then
-                pcall(load, folder) -- Only our data-only importers, never an old UI.
-            end
-        end
-        if type(ClassicQuestLFGDB) == "table" then ElmoLFGDB = ClassicQuestLFGDB
-        elseif type(QuestLFGDB) == "table" then ElmoLFGDB = QuestLFGDB
-        else ElmoLFGDB = {} end
-    end
+    if type(ElmoLFGDB) ~= "table" then ElmoLFGDB = {} end
     A.db = ElmoLFGDB
     A.db.selected = A.db.selected or {}
     A.db.roles = A.db.roles or { DPS = true }

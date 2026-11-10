@@ -627,6 +627,33 @@ function A.Toggle()
     frame:SetShown(not frame:IsShown())
 end
 
+function A.Show()
+    frame:Show()
+end
+
+local function RegisterOptions()
+    if A.optionsCategory or not (Settings and Settings.RegisterCanvasLayoutCategory) then return end
+    local p=CreateFrame("Frame",nil,UIParent);A.optionsPanel=p;p:Hide()
+    Label(p,"ElmoLFG",16,-16,"GameFontNormalLarge")
+    local description=Label(p,"Active quests, dungeons, channels, roles and recruitment settings.",16,-48,"GameFontHighlight")
+    description:SetWidth(530);description:SetJustifyH("LEFT")
+    p.autoJoin=CreateFrame("CheckButton",nil,p,"UICheckButtonTemplate")
+    p.autoJoin:SetPoint("TOPLEFT",16,-80);p.autoJoin:SetSize(26,26)
+    Label(p.autoJoin,"Autojoin while announcing",30,-7,"GameFontHighlight")
+    p.autoJoin:SetScript("OnClick",function(self)
+        A.db.autoJoin=self:GetChecked()==true;RefreshComposer();RefreshAnnouncerPrompt()
+    end)
+    p.open=Button(p,"Open complete LFG settings",280,16,-130,function()
+        if SettingsPanel and HideUIPanel then HideUIPanel(SettingsPanel) end
+        A.Show()
+    end)
+    local help=Label(p,"Choose activities, announcement channels and text, interval, group size and roles in the LFG window. Opening it does not start recruitment.",16,-178,"GameFontHighlightSmall")
+    help:SetWidth(530);help:SetJustifyH("LEFT")
+    p:SetScript("OnShow",function()p.autoJoin:SetChecked(A.db.autoJoin)end)
+    A.optionsCategory=Settings.RegisterCanvasLayoutCategory(p,"ElmoLFG")
+    Settings.RegisterAddOnCategory(A.optionsCategory)
+end
+
 local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:SetScript("OnEvent", function(_, event, ...)
@@ -635,6 +662,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         A.InitializeDB()
         CreateWindow()
         CreateMinimapButton()
+        RegisterOptions()
         for _, name in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN", "QUEST_AUTOCOMPLETE", "QUEST_DATA_LOAD_RESULT", "PLAYER_LEVEL_UP", "CHANNEL_UI_UPDATE", "GROUP_ROSTER_UPDATE", "PLAYER_GUILD_UPDATE", "CHAT_MSG_CHANNEL", "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_GUILD", "CHAT_MSG_WHISPER" }) do events:RegisterEvent(name) end
         pcall(events.RegisterEvent, events, "PLAYER_ROLES_ASSIGNED")
         C_Timer.NewTicker(1, function()
@@ -650,7 +678,7 @@ events:SetScript("OnEvent", function(_, event, ...)
             if command:lower() == "diag" then
                 A.Refresh(true)
                 local _, build, _, interface = GetBuildInfo()
-                local version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")) or "1.4.0"
+                local version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")) or "1.4.1"
                 print("ElmoLFG " .. version .. " · build " .. build .. " · interface " .. interface .. " · " .. #A.quests .. " quests · " .. #A.AvailableDungeons() .. "/" .. #A.dungeons .. " dungeons")
             else A.Toggle() end
         end
