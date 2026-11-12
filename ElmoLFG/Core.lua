@@ -48,8 +48,8 @@ local function QuestSignature()
     local count, total = GetNumQuestLogEntries()
     local parts = { tostring(total) }
     for i = 1, count do
-        local title, level, _, header, collapsed, complete, _, id = GetQuestLogTitle(i)
-        parts[#parts + 1] = table.concat({ title or "", tostring(level), tostring(header), tostring(collapsed), tostring(complete), tostring(id) }, ":")
+        local title, level, tag, header, collapsed, complete, _, id = GetQuestLogTitle(i)
+        parts[#parts + 1] = table.concat({ title or "", tostring(level), tostring(tag), tostring(header), tostring(collapsed), tostring(complete), tostring(id) }, ":")
     end
     return table.concat(parts, "\n")
 end
@@ -71,6 +71,29 @@ local function StoreQuests(quests, expected, signature)
     return available
 end
 
+local function QuestTag(id, fallback)
+    if C_QuestLog and C_QuestLog.GetQuestTagInfo then
+        local info = C_QuestLog.GetQuestTagInfo(id)
+        if info then return info.tagName or fallback, info.tagID, info.isElite end
+    elseif GetQuestTagInfo then
+        local tagID, name, _, _, elite = GetQuestTagInfo(id)
+        return name or fallback, tagID, elite
+    end
+    return fallback
+end
+
+function A.QuestLevel(quest)
+    local tags = Enum and Enum.QuestTag
+    local suffix = ""
+    if quest.tagID == (tags and tags.Dungeon or 81) or quest.tag == (DUNGEON or "Dungeon") then
+        suffix = "D"
+    elseif quest.tagID == (tags and tags.Group or 1) or quest.isElite or
+        quest.tag == (ELITE or "Elite") or quest.tag == (GROUP or "Group") then
+        suffix = "+"
+    end
+    return tostring(quest.level) .. suffix
+end
+
 function A.ReadQuests(force)
     if C_QuestLog and C_QuestLog.GetInfo then
         -- Forever exposes all log entries, including collapsed headers, through
@@ -86,10 +109,10 @@ function A.ReadQuests(force)
                 local id, complete = info.questID
                 if C_QuestLog.IsFailed(id) then complete = -1
                 elseif C_QuestLog.IsComplete(id) then complete = 1 end
-                local tag = C_QuestLog.GetQuestTagInfo(id)
+                local tag, tagID, elite = QuestTag(id)
                 quests[#quests + 1] = {
                     id = id, key = "q:" .. id, name = info.title, level = info.level or 0,
-                    tag = tag and tag.tagName, complete = complete, zone = zone,
+                    tag = tag, tagID = tagID, isElite = elite, complete = complete, zone = zone,
                     link = (C_QuestLog.GetQuestLink or GetQuestLink)(id),
                 }
                 present[id] = true
@@ -133,9 +156,10 @@ function A.ReadQuests(force)
             zone = title or ""
             if collapsed[ordinal] then restore[#restore + 1] = i end
         elseif title and id and id > 0 then
+            local tagName, tagID, elite = QuestTag(id, tag)
             quests[#quests + 1] = {
                 id = id, key = "q:" .. id, name = title, level = level or 0,
-                tag = tag, complete = complete, zone = zone, link = GetQuestLink(id),
+                tag = tagName, tagID = tagID, isElite = elite, complete = complete, zone = zone, link = GetQuestLink(id),
             }
         end
     end
@@ -155,23 +179,25 @@ function A.AvailableDungeons()
 end
 
 local function QuestChatLink(quest)
+    local level = A.QuestLevel(quest)
+    local link = quest.link and ("[" .. level .. "] " .. quest.link)
     -- Questie's Shift-click hook sends this ID-bearing bracket format. Its
     -- incoming chat filter turns it into the clickable questie: hyperlink.
     -- Sending a native quest: hyperlink on this Era client loses the link.
     if Questie and Questie.started then
-        return "[[" .. quest.level .. "] " .. quest.name .. " (" .. quest.id .. ")]", true
+        return "[[" .. level .. "] " .. quest.name .. " (" .. quest.id .. ")]", true, link
     end
-    return quest.link, false
+    return link, false, link
 end
 
 function A.SelectedActivities()
     local activities = {}
     for _, quest in ipairs(A.quests) do
         if A.db.selected[quest.key] then
-            local chatLink, questieLink = QuestChatLink(quest)
+            local chatLink, questieLink, link = QuestChatLink(quest)
             activities[#activities + 1] = {
                 kind = "quest",
-                label = quest.name, link = quest.link, chatLink = chatLink,
+                label = quest.name, link = link, chatLink = chatLink,
                 questID = quest.id, questieLink = questieLink,
             }
         end
@@ -235,9 +261,10 @@ function A.BuildGeneratedMessage(forChat)
         chatSections[#chatSections + 1] = prefix .. table.concat(chatNames, "")
     end
     if #dungeons > 0 then
-        local section = table.concat(dungeons, ", ") .. " need " .. A.DungeonRoleText(" | ")
-        sections[#sections + 1] = section
-        chatSections[#chatSections + 1] = section
+        local section = table.concat(dungeons, ", ") .. " need "
+        sections[#sections + 1] = section .. A.DungeonRoleText(" | ")
+        -- A bare pipe is a chat escape, so use a plain separator on the wire.
+        chatSections[#chatSections + 1] = section .. A.DungeonRoleText(" / ")
     end
     local chatMessage = "LFM " .. table.concat(chatSections, "; ")
     local message = forChat and chatMessage or ("LFM " .. table.concat(sections, "; "))

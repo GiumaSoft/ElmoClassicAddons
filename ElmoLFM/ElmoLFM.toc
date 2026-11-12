@@ -1,0 +1,19 @@
+## Interface: 16001
+## Title: ElmoLFM
+## Notes: Find players by zone and level, whisper selected players and invite interested replies.
+## Author: Giuseppe
+## Version: 1.0.7
+## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## SavedVariablesPerCharacter: ElmoLFMDB
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+
+Core.lua
+Theme.lua
+Links.lua
+UI.lua
+Settings.lua
+Minimap.lua

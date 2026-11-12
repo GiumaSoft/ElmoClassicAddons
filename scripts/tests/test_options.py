@@ -159,6 +159,12 @@ class OptionsTests(unittest.TestCase):
             A.Command('questkills on');p=optionsShow('ElmoPlater');assert(p.questKills:GetChecked())
             p.auraSize:SetText('30');optionsClick(p.apply);assert(A.db.plateAuraSize==30)
             p.auraSize:SetText('99');optionsClick(p.apply);assert(A.db.plateAuraSize==30 and p.auraSize:GetText()=='30')
+            assert(p.showMana:GetChecked() and p.showCast:GetChecked())
+            p.showMana:SetChecked(false);optionsClick(p.showMana);assert(not A.db.showMana)
+            p.showCast:SetChecked(false);optionsClick(p.showCast);assert(not A.db.showCast)
+            p=optionsShow('ElmoPlater');assert(not p.showMana:GetChecked() and not p.showCast:GetChecked())
+            p.showMana:SetChecked(true);optionsClick(p.showMana);assert(A.db.showMana)
+            p.showCast:SetChecked(true);optionsClick(p.showCast);assert(A.db.showCast)
             assert(p.healthTest==nil and p.open==nil and A.Rules==nil)
             A.Command('');assert(openedCategory==A.Settings.optionsCategory:GetID())''')
 

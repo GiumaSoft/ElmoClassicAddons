@@ -1,6 +1,6 @@
 local addonName, A = ...
 ElmoPlater = A
-A.version, A.records, A.units = "2.3.2", {}, {}
+A.version, A.records, A.units = "2.4.0", {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -141,6 +141,8 @@ function A.Initialize()
     A.db.rules, A.db.ruleSchema, A.db.watchDebuff, A.db.learnedDebuffs = nil, nil, nil, nil
     A.db.plateAuraSize = math.max(14, math.min(36, A.Number(A.db.plateAuraSize) or 22))
     A.db.questKills = A.db.questKills ~= false
+    A.db.showMana = A.db.showMana ~= false
+    A.db.showCast = A.db.showCast ~= false
     A.Settings.RegisterOptions()
     A.Auras.Initialize()
     A.ready = not InCombatLockdown()
@@ -179,6 +181,11 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
 end)
 for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED", "NAME_PLATE_UNIT_ADDED",
     "NAME_PLATE_UNIT_REMOVED", "UNIT_HEALTH", "UNIT_MAXHEALTH", "UNIT_AURA", "UNIT_FACTION", "UNIT_FLAGS",
+    "UNIT_POWER_UPDATE", "UNIT_POWER_FREQUENT", "UNIT_MAXPOWER", "UNIT_DISPLAYPOWER",
+    "UNIT_SPELLCAST_START", "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_FAILED_QUIET",
+    "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_CHANNEL_START",
+    "UNIT_SPELLCAST_CHANNEL_UPDATE", "UNIT_SPELLCAST_CHANNEL_STOP",
+    "UNIT_SPELLCAST_INTERRUPTIBLE", "UNIT_SPELLCAST_NOT_INTERRUPTIBLE",
     "PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT",
     "CVAR_UPDATE", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN",
     "QUEST_AUTOCOMPLETE", "QUEST_DATA_LOAD_RESULT"}) do

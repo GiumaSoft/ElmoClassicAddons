@@ -35,7 +35,7 @@ function GetNumQuestLogEntries()
 end
 function GetQuestLogTitle(index)
     local row = visible()[index]
-    if row then return row.title, row.level or 0, nil, row.header, row.collapsed, row.complete, nil, row.id end
+    if row then return row.title, row.level or 0, row.tag, row.header, row.collapsed, row.complete, nil, row.id end
 end
 function ExpandQuestHeader(index)
     expanded=expanded+1
@@ -101,6 +101,50 @@ class ElmoLFGTests(unittest.TestCase):
 
     def check(self, code):
         self.lua.execute(code)
+
+    def test_elite_and_dungeon_levels_in_native_and_questie_announcements(self):
+        self.check('''
+            log[2].level=38;log[2].tag='Elite'
+            log[3].level=38;log[3].tag='Dungeon';A.ReadQuests(true)
+            A.db.selected={['q:147']=true,['q:83']=true}
+            for _,questie in ipairs({false,true})do
+                Questie=questie and {started=true} or nil
+                local preview,err,bytes=A.BuildMessage()
+                local wire=A.BuildMessage(true)
+                assert(not err and bytes==#wire)
+                assert(preview:find('[38+]',1,true) and preview:find('[38D]',1,true))
+                assert(wire:find('[38+]',1,true) and wire:find('[38D]',1,true))
+                assert(preview:find('|Hquest:147:10|h',1,true))
+                if questie then
+                    assert(wire:find('[[38+] Manhunt (147)]',1,true))
+                    assert(wire:find('[[38D] Red Linen Goods (83)]',1,true))
+                else assert(wire:find('|Hquest:83:10|h',1,true)) end
+            end
+        ''')
+
+    def test_localized_era_tags_refresh_without_a_forced_scan(self):
+        self.check('''
+            ELITE='Élite';DUNGEON='Spedizione'
+            log[1].collapsed=false;log[2].level=38;log[2].tag=ELITE
+            A.ReadQuests(true);assert(A.QuestLevel(A.quests[1])=='38+')
+            log[2].tag=DUNGEON;A.ReadQuests(false)
+            assert(A.QuestLevel(A.quests[1])=='38D')
+            log[2].tag=nil;A.ReadQuests(false)
+            assert(A.QuestLevel(A.quests[1])=='38')
+        ''')
+
+    def test_era_tag_ids_are_independent_of_language(self):
+        self.check('''
+            log[2].level=38;log[3].level=38
+            GetQuestTagInfo=function(id)return id==147 and 1 or 81,'Localized tag' end
+            A.ReadQuests(true)
+            assert(A.QuestLevel(A.quests[1])=='38+' and A.QuestLevel(A.quests[2])=='38D')
+            C_QuestLog={GetQuestTagInfo=function(id)
+                return {tagID=id==147 and 81 or 1,tagName='Localized tag',isElite=true}
+            end}
+            A.ReadQuests(true)
+            assert(A.QuestLevel(A.quests[1])=='38D' and A.QuestLevel(A.quests[2])=='38+')
+        ''')
 
     def test_closed_headers_included_and_original_state_restored(self):
         self.check('''
@@ -201,6 +245,8 @@ class ElmoLFGTests(unittest.TestCase):
         self.check('''
             Questie={started=true}
             A.db.selected["q:147"]=true; A.db.selected["q:83"]=true
+            log[2].level=38;log[2].tag='Elite'
+            log[3].level=38;log[3].tag='Dungeon';A.ReadQuests(true)
             A.quests[1].name="In Defense of the King's Lands"
             A.quests[2].name="The Trogg Threat"
             local modules={
@@ -396,7 +442,7 @@ class ElmoLFGTests(unittest.TestCase):
             Questie={started=true}
             A.db.selected["q:147"]=true;A.db.selected["q:83"]=true;A.db.selected["d:dm"]=true
             local message,err=A.BuildMessage(true)
-            assert(not err and message:find("LFM Quest 4/5: [[10] Manhunt (147)][[9] Red Linen Goods (83)]; The Deadmines need 1 Tank | 1 Heal | 2 Dps",1,true)==1)
+            assert(not err and message:find("LFM Quest 4/5: [[10] Manhunt (147)][[9] Red Linen Goods (83)]; The Deadmines need 1 Tank / 1 Heal / 2 Dps",1,true)==1)
             local suffix=" - /w me inv role (tank, heal, dps)(autojoin)"
             assert(message:sub(-#suffix)==suffix)
         ''')

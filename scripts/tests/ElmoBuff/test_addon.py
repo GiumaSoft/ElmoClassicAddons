@@ -198,6 +198,17 @@ end
 '''
 
 
+PALADIN_SETUP = r'''
+MOCK.units.player.class='PALADIN';MOCK.book={}
+MOCK.learn(19740,'Blessing of Might',1,4)
+MOCK.learn(19742,'Blessing of Wisdom',1,14)
+MOCK.learn(20217,'Blessing of Kings',1,20)
+MOCK.alias(25782,'Greater Blessing of Might')
+MOCK.alias(25894,'Greater Blessing of Wisdom')
+MOCK.alias(25898,'Greater Blessing of Kings')
+'''
+
+
 def create_vm(setup='', saved=None):
     vm = LuaRuntime(unpack_returned_tuples=True)
     vm.execute(STUB)
@@ -433,21 +444,156 @@ class BuffTests(unittest.TestCase):
         MOCK.combatState(false);A.Command('status')
         ''')
 
-    def test_paladin_selects_one_learned_blessing_instead_of_replacing_each_other(self):
-        vm = create_vm("""
-        MOCK.units.player.class='PALADIN';MOCK.book={}
-        MOCK.learn(19740,'Blessing of Might',1,4)
-        MOCK.learn(19742,'Blessing of Wisdom',1,14)
-        MOCK.alias(25782,'Greater Blessing of Might');MOCK.alias(25894,'Greater Blessing of Wisdom')
+    def test_paladin_shows_all_alternatives_until_an_aura_confirms_the_selected_blessing(self):
+        vm = create_vm(PALADIN_SETUP)
+        vm.execute('''
+        assert(#A.Spells.active==3)
+        local buttons=A.UI.groups[2].buttons
+        for _,b in ipairs(buttons)do assert(b:IsShown()and b.attributes.type=='spell')end
+        MOCK.press(buttons[3]);MOCK.tick(.5)
+        assert(#MOCK.casts==1 and MOCK.casts[1].spell==20217 and MOCK.casts[1].unit=='party1')
+        for _,b in ipairs(buttons)do assert(b:IsShown())end
+        MOCK.aura('party1','Blessing of Kings',900,20217,'player');MOCK.event('UNIT_AURA','party1')
+        for _,b in ipairs(buttons)do assert(not b:IsShown()and b.attributes.type==nil)end
+        for _,b in ipairs(A.UI.groups[1].buttons)do assert(b:IsShown())end
+        MOCK.tick(901)
+        for _,b in ipairs(buttons)do assert(b:IsShown()and b.attributes.type=='spell')end
+        ''')
+
+    def test_each_blessing_hides_its_own_alternatives_and_can_refresh_without_switching(self):
+        for column, spell_id, name in [
+            (1, 19740, 'Blessing of Might'), (2, 19742, 'Blessing of Wisdom'),
+            (3, 20217, 'Blessing of Kings'),
+        ]:
+            with self.subTest(blessing=name):
+                vm = create_vm(PALADIN_SETUP)
+                vm.execute(f"""
+                MOCK.aura('party1','{name}',45,{spell_id},'player')
+                MOCK.event('UNIT_AURA','party1')
+                for i,b in ipairs(A.UI.groups[2].buttons)do
+                    assert(b:IsShown()==(i=={column}))
+                    if i=={column} then assert(b.state=='refresh'and b.attributes.spell=={spell_id})
+                    else assert(b.state=='covered'and b.attributes.type==nil)end
+                end
+                A.db.refresh=0;A.Update()
+                for _,b in ipairs(A.UI.groups[2].buttons)do assert(not b:IsShown())end
+                MOCK.units.party1.auras={{}};MOCK.event('UNIT_AURA','party1')
+                for _,b in ipairs(A.UI.groups[2].buttons)do assert(b:IsShown())end
+                """)
+
+    def test_foreign_blessings_allow_another_blessing_from_this_paladin(self):
+        vm = create_vm(PALADIN_SETUP)
+        vm.execute('''
+        MOCK.aura('party1','Blessing of Might',900,19740,'party2');A.Update()
+        local b=A.UI.groups[2].buttons
+        assert(not b[1]:IsShown()and b[2]:IsShown()and b[3]:IsShown())
+        MOCK.aura('party1','Blessing of Kings',900,20217,'player');A.Update()
+        for _,button in ipairs(b)do assert(not button:IsShown()and button.attributes.type==nil)end
+        ''')
+
+    def test_group_blessings_and_unknown_ownership_do_not_enable_a_conflicting_cast(self):
+        vm = create_vm(PALADIN_SETUP)
+        vm.execute('''
+        MOCK.aura('party1','Greater Blessing of Wisdom',900,25894,'player');A.Update()
+        for _,b in ipairs(A.UI.groups[2].buttons)do assert(not b:IsShown())end
+        MOCK.units.party1.auras[1].sourceUnit=MOCK.secret();A.Update()
+        local b=A.UI.groups[2].buttons
+        assert(b[1].state=='unknown'and b[2].state=='covered'and b[3].state=='unknown')
+        for _,button in ipairs(b)do assert(not button:IsShown()and button.attributes.type==nil)end
+        ''')
+
+    def test_paladin_options_enable_each_alternative_instead_of_preselecting_one(self):
+        vm = create_vm(PALADIN_SETUP, saved={'blessing': 'wisdom'})
+        vm.execute('''
+        local p=A.Settings.panel;p.scripts.OnShow(p)
+        assert(p.blessing==nil and #A.Spells.active==3)
+        for _,check in ipairs(p.buffs)do assert(check:IsShown()and check:GetChecked())end
+        p.buffs[1]:SetChecked(false);p.buffs[1].scripts.OnClick(p.buffs[1])
+        local b=A.UI.groups[2].buttons
+        assert(not b[1]:IsShown()and b[2]:IsShown()and b[3]:IsShown())
+        -- A manually applied disabled family still conflicts with its siblings.
+        MOCK.aura('party1','Blessing of Might',900,19740,'player');A.Update()
+        for _,button in ipairs(b)do assert(not button:IsShown())end
+        ''')
+
+    def test_localized_group_names_and_unlearned_alternatives_are_recognized(self):
+        vm = create_vm(PALADIN_SETUP + """
+        MOCK.spells[19740].name='Potenza';MOCK.spells[19742].name='Saggezza'
+        MOCK.spells[20217].name='Re';MOCK.spells[20217].known=false
+        MOCK.spells[25898].name='Re Superiore'
         """)
         vm.execute('''
-        assert(#A.Spells.active==1 and A.Spells.active[1].key=='might')
-        A.Settings.panel.blessing.scripts.OnClick()
-        assert(A.db.blessing=='wisdom'and #A.Spells.active==1)
-        assert(A.UI.groups[2].buttons[1].attributes.spell==19742)
-        assert(not A.UI.groups[2].buttons[2]:IsShown())
-        MOCK.aura('party1','Greater Blessing of Wisdom',900);A.Update()
-        assert(not A.UI.groups[2].buttons[1]:IsShown())
+        local b=A.UI.groups[2].buttons
+        assert(b[1]:IsShown()and b[2]:IsShown()and not b[3]:IsShown())
+        MOCK.aura('party1','Re Superiore',900,25898,'player');A.Update()
+        for _,button in ipairs(b)do assert(not button:IsShown())end
+        ''')
+
+    def test_compatible_priest_and_druid_buffs_remain_independent(self):
+        setups = [
+            """
+            MOCK.units.party1.class='MAGE'
+            MOCK.learn(14752,'Divine Spirit',1,30);MOCK.alias(27681,'Prayer of Spirit')
+            MOCK.learn(976,'Shadow Protection',1,30);MOCK.alias(27683,'Prayer of Shadow Protection')
+            """,
+            """
+            MOCK.units.player.class='DRUID';MOCK.book={}
+            MOCK.learn(1126,'Mark of the Wild',1,1);MOCK.alias(21849,'Gift of the Wild')
+            MOCK.learn(467,'Thorns',1,6)
+            """,
+        ]
+        for setup in setups:
+            vm = create_vm(setup, saved={'buffs': {'shadow': True, 'thorns': True}})
+            vm.execute('''
+            local b=A.UI.groups[2].buttons
+            assert(b[1]:IsShown()and b[2]:IsShown())
+            MOCK.aura('party1',b[1].family.name,900,b[1].attributes.spell,'player');A.Update()
+            assert(not b[1]:IsShown()and b[2]:IsShown()and b[2].state=='missing')
+            ''')
+
+    def test_exclusive_groups_work_for_any_class_without_a_paladin_branch(self):
+        vm = create_vm("""
+        MOCK.units.player.class='MAGE';MOCK.book={}
+        MOCK.units.party1.class='PRIEST'
+        MOCK.learn(1459,'Arcane Intellect',1,1);MOCK.alias(23028,'Arcane Brilliance')
+        """)
+        vm.execute('''
+        -- Test-only mutually exclusive wards exercise the shared rule engine.
+        MOCK.learn(900001,'Fixture Ward A',1,1);MOCK.learn(900002,'Fixture Ward B',1,1)
+        table.insert(A.Spells.catalog.MAGE,{key='ward_a',id=900001,levels={1},exclusive='fixture_wards'})
+        table.insert(A.Spells.catalog.MAGE,{key='ward_b',id=900002,levels={1},exclusive='fixture_wards'})
+        A.RefreshSpells()
+        local b=A.UI.groups[2].buttons
+        for _,button in ipairs(b)do assert(button:IsShown())end
+        MOCK.aura('party1','Fixture Ward A',900,900001,'party2');A.Update()
+        assert(b[1]:IsShown()and not b[2]:IsShown()and not b[3]:IsShown())
+        assert(b[3].state=='covered'and b[3].attributes.type==nil)
+        ''')
+
+    def test_legacy_aura_sources_support_blessing_exclusion(self):
+        vm = create_vm(PALADIN_SETUP + """
+        C_UnitAuras=nil
+        function UnitBuff(unit,index)
+            local a=MOCK.units[unit].auras[index]
+            if a then return a.name,1,0,nil,1800,a.expirationTime,a.sourceUnit,nil,nil,a.spellId end
+        end
+        """)
+        vm.execute('''
+        MOCK.aura('party1','Blessing of Wisdom',900,19742,'player');A.Update()
+        for _,b in ipairs(A.UI.groups[2].buttons)do assert(not b:IsShown()and b.attributes.type==nil)end
+        ''')
+
+    def test_blessing_changes_in_combat_do_not_query_auras_or_mutate_protected_buttons(self):
+        vm = create_vm(PALADIN_SETUP)
+        vm.execute('''
+        MOCK.combatState(true)
+        local calls,writes=MOCK.auraCalls,MOCK.writes
+        MOCK.aura('party1','Blessing of Kings',900,20217,'player')
+        MOCK.event('UNIT_AURA','party1');MOCK.tick(1)
+        assert(MOCK.auraCalls==calls and MOCK.writes==writes)
+        for _,b in ipairs(A.UI.groups[2].buttons)do assert(not b:IsVisible()and b.attributes.type==nil)end
+        MOCK.combatState(false)
+        for _,b in ipairs(A.UI.groups[2].buttons)do assert(not b:IsShown()and b.attributes.type==nil)end
         ''')
 
     def test_raid_and_unsupported_classes_do_not_produce_rebuff_buttons(self):

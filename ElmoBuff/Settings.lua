@@ -22,11 +22,9 @@ function S.Refresh()
     p.side:SetText("Side: "..A.db.side:lower());p.size:SetText("Icon size: "..A.db.size)
     local families=A.Spells.families or {}
     for i,b in ipairs(p.buffs) do
-        local f=families[i];b:SetShown(f~=nil and A.class~="PALADIN")
+        local f=families[i];b:SetShown(f~=nil)
         if f then b.caption:SetText(f.name);b:SetChecked(A.db.buffs[f.key]) end
     end
-    p.blessing:SetShown(A.class=="PALADIN")
-    p.blessing:SetText(A.Spells.active and A.Spells.active[1] and A.Spells.active[1].name or "No blessing learned")
 end
 function S.Register()
     if S.category or not (Settings and Settings.RegisterCanvasLayoutCategory) then return end
@@ -50,16 +48,6 @@ function S.Register()
             if f then change(function()A.db.buffs[f.key]=self:GetChecked()==true end)end
         end)
     end
-    p.blessing=button(p,"Blessing",16,-202,310,function()
-        change(function()
-            local list=A.Spells.families or {};local selected=0
-            for i,f in ipairs(list) do if f.key==A.db.blessing then selected=i end end
-            for n=1,#list do
-                local f=list[(selected+n-1)%#list+1]
-                if #f.ranks>0 then A.db.blessing=f.key;break end
-            end
-        end)
-    end)
     label(p,"Refresh when less than",16,-326,220)
     p.refresh=CreateFrame("EditBox",nil,p,"InputBoxTemplate")
     p.refresh:SetPoint("TOPLEFT",240,-318);p.refresh:SetSize(55,26);p.refresh:SetAutoFocus(false)
@@ -76,7 +64,7 @@ function S.Register()
     p.size=button(p,"Icon size",274,-360,150,function()
         change(function()A.db.size=A.db.size>=40 and 20 or math.min(40,A.db.size+4) end)
     end)
-    label(p,"Icons disappear after the buff is confirmed. Failed casts stay visible. Rebuffs are hidden and disabled during combat; raids and pets are excluded.",16,-416,530)
+    label(p,"Confirmed buffs hide their incompatible alternatives for that member. Failed casts keep the choices visible. Rebuffs are hidden and disabled during combat; raids and pets are excluded.",16,-416,530)
     p:SetScript("OnShow",function()A.RefreshSpells();S.Refresh()end)
     S.category=Settings.RegisterCanvasLayoutCategory(p,"ElmoBuff");Settings.RegisterAddOnCategory(S.category)
 end

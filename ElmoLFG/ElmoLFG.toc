@@ -2,7 +2,7 @@
 ## Title: ElmoLFG
 ## Notes: Find groups for active quests and dungeons in Classic Era and WoW Forever.
 ## Author: Giuseppe
-## Version: 1.4.2
+## Version: 1.4.4
 ## X-Curse-Project-ID: 1785477
 ## SavedVariablesPerCharacter: ElmoLFGDB
 

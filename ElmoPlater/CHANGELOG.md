@@ -1,3 +1,14 @@
+# 2.4.0
+
+Added optional mob mana and casting bars beneath health. Mana uses a thin blue
+bar and excludes non-mana power types. The cast bar includes spell name/icon,
+supports channels, delays and interruptions, and closes the gap when mana is
+absent. Native min/max/value setters display ordinary or protected cast
+timestamps without addon arithmetic on private values. Unavailable timing is
+omitted without reconstructing casts from combat logs. Added two enabled-by-default
+checkboxes in Options > AddOns > ElmoPlater. Health geometry and native click
+ordering are preserved in both client packages.
+
 # 2.3.2
 
 On WoW Forever, Blizzard protects enemy health values during combat. ElmoPlater

@@ -1,4 +1,4 @@
-# ElmoLFG 1.4.2
+# ElmoLFG 1.4.4
 
 ## Options menu
 
@@ -11,10 +11,13 @@ Open `/elmolfg` or `/elfg`, or click the minimap button. Former command aliases
 have been retired.
 
 - Select active quests or available dungeons and choose your announcement channel.
+- Quest levels show `[38+]` for elite/group quests and `[38D]` for dungeon quests, in the list, preview and announcements. Normal quests show `[38]`. Native links and optional Questie links remain clickable.
 - Completed quests, including quests ready to turn in, are removed from the list
   and selection. The journal refreshes on quest events and retries delayed data.
 - The announcement preview combines current activities, available group roles
   and your editable custom message. Assign missing roles with **Group roles**.
+  Role separators use `/` in outgoing chat to avoid invalid chat escape codes;
+  the preview retains its vertical-bar layout.
 - **Post announce** sends once. **Start announcing** starts a session with a
   configurable interval from 30 to 300 seconds and a **Stop at** group size.
 - The saved **Autojoin** checkbox controls new automatic invites from `inv`

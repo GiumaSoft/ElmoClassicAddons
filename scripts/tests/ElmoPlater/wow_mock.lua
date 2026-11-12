@@ -96,6 +96,7 @@ function methods:SetStatusBarTexture(value) self.statusTexture=value end
 function methods:SetStatusBarColor(...) self.statusColor={...} end
 function methods:SetMinMaxValues(low,high) self.minimum,self.maximum=low,high end
 function methods:SetValue(value) self.value=value end
+function methods:SetReverseFill(value) self.reverseFill=value end
 function methods:GetLeft() local x=self:GetRect(); return x end
 function methods:GetTop() local _,y,_,h=self:GetRect(); return y+h end
 function methods:GetWidth() local _,_,w=self:GetRect(); return w end

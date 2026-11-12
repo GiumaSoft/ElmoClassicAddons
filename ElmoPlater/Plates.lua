@@ -33,6 +33,7 @@ local function makeDisplay(parent)
     f.levelBadge:SetBackdropBorderColor(.47, .36, .14, 1)
     f.level = text(f.levelBadge, 12); f.level:SetPoint("CENTER")
     f.level:SetWordWrap(false)
+    A.UnitBars.Create(f)
     f.icons = {}; f:Hide()
     return f
 end
@@ -76,6 +77,7 @@ end
 
 local function restore(record)
     if record.auraContainer then record.auraContainer:SetEnabled(false); record.auraContainer:Hide() end
+    A.UnitBars.Reset(record.frame)
     record.frame:Hide()
     local native = record.native
     if native and A.Call(native.GetParent, native) == record.plate then
@@ -310,6 +312,7 @@ local function render(record, now)
         record.borderSize = borderSize
     end
     f:SetBackdropBorderColor(border, border, border, 1)
+    A.UnitBars.Update(record, now)
     f:Show(); bindClicks(record)
     return true
 end

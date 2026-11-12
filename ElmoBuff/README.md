@@ -20,7 +20,7 @@ Supported buffs:
 | Priest | Fortitude, Divine Spirit, optional Shadow Protection |
 | Mage | Arcane Intellect |
 | Druid | Mark of the Wild, optional Thorns |
-| Paladin | One selected learned blessing: Might, Wisdom or Kings |
+| Paladin | All enabled, learned alternatives: Might, Wisdom and Kings |
 
 Only learned spellbook ranks are used. A lower rank is selected for low-level
 members. Localized spell names are read from the client; equivalent group buffs
@@ -34,6 +34,21 @@ guess its strength from spell ID or rank. Unreadable caster/rank data also preve
 an early replacement. All matching auras are retained, so an expiring weaker
 entry cannot overwrite coverage by another existing buff. This is family-based
 coverage, not a universal comparison of unrelated stat buffs or consumables.
+
+Mutually exclusive buff families share the same behavior for every supported
+class: all enabled, learned alternatives appear while no conflicting buff is
+present. A confirmed active buff suppresses its incompatible alternatives for
+that member. Failed or unconfirmed casts leave the choices available. When the
+buff expires or is removed, the alternatives return. If early refresh is
+enabled, only the existing buff can reappear for refresh, without switching to
+another family. Compatible buffs such as Fortitude and Divine Spirit, or Mark
+of the Wild and Thorns, remain independent.
+
+Blessing conflicts are tracked per caster. Another paladin's blessing covers
+that same family without blocking a different blessing from you. Your own
+normal or Greater blessing suppresses your other alternatives. Unreadable
+ownership is treated as unknown rather than enabling a conflicting cast.
+Options provides individual blessing checkboxes instead of preselecting one.
 
 Unreadable or restricted aura data is treated as unknown, never as a missing
 buff. Restrictions can therefore suppress suggestions even outside combat.

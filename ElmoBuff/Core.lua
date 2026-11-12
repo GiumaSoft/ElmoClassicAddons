@@ -1,6 +1,6 @@
 local addonName, A = ...
 ElmoBuff = A
-A.version = "1.0.1"
+A.version = "1.0.2"
 A.units = {"player","party1","party2","party3","party4"}
 local frame, elapsed = CreateFrame("Frame"), 0
 local function checked(ok, ...) if ok then return ... end end
@@ -57,10 +57,10 @@ end
 
 function A.BuffState(f, auras, complete, spell)
     if not auras then return "unknown" end
-    local remaining
+    local remaining, uncertainConflict
     for _,aura in ipairs(auras) do
+        local seconds=aura.expires and aura.expires>0 and math.max(0,aura.expires-GetTime())
         if f.names[aura.name] then
-            local seconds=aura.expires and aura.expires>0 and math.max(0,aura.expires-GetTime())
             -- A permanent or unreadable duration is still a positively identified buff.
             if not seconds then return "active" end
             if seconds>0 then
@@ -70,8 +70,18 @@ function A.BuffState(f, auras, complete, spell)
                 if not aura.mine or not spell or aura.id~=spell.id then return "covered",seconds end
                 remaining=math.max(remaining or 0,seconds)
             end
+        elseif f.exclusive and (not seconds or seconds>0) then
+            for _,other in ipairs(A.Spells.families) do
+                if other~=f and other.exclusive==f.exclusive and other.names[aura.name] then
+                    -- Some groups conflict only for the same caster. Unknown
+                    -- ownership must not enable a potentially destructive cast.
+                    if not f.exclusiveByCaster or aura.mine==true then return "covered",seconds end
+                    if aura.mine==nil then uncertainConflict=true end
+                end
+            end
         end
     end
+    if uncertainConflict then return "unknown" end
     if remaining then
         if remaining<=A.db.refresh and not complete then return "unknown" end
         return remaining<=A.db.refresh and "refresh" or "active",remaining
@@ -105,7 +115,7 @@ function A.Update()
             local f=A.Spells.active[column]
             local spell=f and A.Spells.ForUnit(f,unit)
             local state,remaining="inactive",nil
-            if show and f and spell and (A.class=="PALADIN" or A.db.buffs[f.key]) and viable=="ready" then
+            if show and f and spell and A.db.buffs[f.key] and viable=="ready" then
                 if f.mana and not manaClasses[class] then state="ineligible"
                 else state,remaining=A.BuffState(f,auras,complete,spell) end
             end

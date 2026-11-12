@@ -15,9 +15,9 @@ S.catalog = {
         {key="thorns",id=467,label="Thorns",levels={6,14,24,34,44,54},default=false},
     },
     PALADIN = {
-        {key="might",id=19740,group=25782,label="Blessing of Might",levels={4,12,22,32,42,52,60}},
-        {key="wisdom",id=19742,group=25894,label="Blessing of Wisdom",levels={14,24,34,44,54,60}},
-        {key="kings",id=20217,group=25898,label="Blessing of Kings",levels={20}},
+        {key="might",id=19740,group=25782,label="Blessing of Might",levels={4,12,22,32,42,52,60},exclusive="blessing",exclusiveByCaster=true},
+        {key="wisdom",id=19742,group=25894,label="Blessing of Wisdom",levels={14,24,34,44,54,60},exclusive="blessing",exclusiveByCaster=true},
+        {key="kings",id=20217,group=25898,label="Blessing of Kings",levels={20},exclusive="blessing",exclusiveByCaster=true},
     },
 }
 
@@ -92,17 +92,7 @@ function S.Refresh()
     for _, f in ipairs(S.families) do
         table.sort(f.ranks,function(a,b) return a.rank<b.rank or a.rank==b.rank and a.order<b.order end)
     end
-    if A.class == "PALADIN" then
-        local selected
-        for _, f in ipairs(S.families) do
-            if f.key == A.db.blessing and #f.ranks>0 then selected=f end
-        end
-        if not selected then
-            for _, f in ipairs(S.families) do if #f.ranks>0 then selected=f;break end end
-        end
-        S.active = selected and {selected} or {}
-        if selected then A.db.blessing=selected.key end
-    else S.active = S.families end
+    S.active = S.families
 end
 
 function S.ForUnit(f, unit)

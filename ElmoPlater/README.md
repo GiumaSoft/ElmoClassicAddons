@@ -1,7 +1,7 @@
-# ElmoPlater 2.3.2
+# ElmoPlater 2.4.0
 
 Classic Era / Forever nameplates with solid reaction colours, contrasting
-borders, health percentage, difficulty-coloured levels and your harmful debuffs.
+borders, health percentage, mana, casting, difficulty-coloured levels and your harmful debuffs.
 Claimed mobs are grey and marked `[CLAIMED]`. Native positioning, overlap and
 click ordering remain owned by WoW.
 
@@ -36,12 +36,38 @@ Open **Options > AddOns > ElmoPlater**, or `/eplater` (`/elmoplater`), for:
 
 - Show/hide the quest kill knife.
 - Debuff icon size, from 14 to 36 pixels.
+- Show/hide mob mana bars.
+- Show/hide mob casting bars.
 
 Settings are saved per character in ElmoPlaterDB. Former-addon importers and
 command aliases have been removed.
 `/eplater status` reports tracked bars and health readability; `/eplater auras`
 reports the active aura display and skips direct queries when Blizzard manages
 that display or restricts aura data.
+
+## Mana and casting
+
+A thin blue mana bar appears below the health bar for mobs using mana with a
+nonzero maximum. It remains visible at zero current mana. Other power types
+are omitted. Protected current/max mana values go directly to Blizzard's
+status-bar display methods.
+
+The casting bar appears below mana, or directly below health when mana is
+absent. It includes the spell icon and name. Ordinary casts fill in gold;
+channels count down in green. A publicly reported non-interruptible cast is
+grey; private interruptibility is not classified. Power and spellcast events
+refresh the display, including casts already in progress when a plate appears.
+
+Cast start/end timestamps go directly to Blizzard's status-bar min/max setters;
+the current value is the public clock in the same millisecond units. Protected
+timestamps are never subtracted, converted or compared by addon code. Channels
+show the remaining coloured portion using a native elapsed fill from the right.
+Missing timing hides that cast. Classic Era may not expose NPC casts; no
+combat-log reconstruction or spell-duration database is used. Rendering on the
+live client still needs an in-game check.
+
+Both options default to enabled. Disabling either applies immediately. The
+extra bars do not enlarge the health rectangle or its native click area.
 
 ## Personal debuffs
 

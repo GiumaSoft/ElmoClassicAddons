@@ -1,5 +1,29 @@
 # Sources and validation
 
+Mana/cast API review on 2026-11-12, Forever snapshot
+4cd0ab752a77164f654ccbca9d0c1fe8dafceebe:
+https://github.com/Gethe/wow-ui-source/blob/4cd0ab752a77164f654ccbca9d0c1fe8dafceebe/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua
+https://github.com/Gethe/wow-ui-source/blob/4cd0ab752a77164f654ccbca9d0c1fe8dafceebe/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleStatusBarAPIDocumentation.lua
+
+UnitBars.lua checks the public UnitPowerType and forwards UnitPower/UnitPowerMax
+directly to owned status bars. Public zero maximum hides mana; private maxima
+are never compared. UnitCastingInfo/UnitChannelInfo supply the spell name/icon
+directly to display methods. Their start/end timestamps are forwarded as the
+status-bar min/max range, with GetTime()*1000 as the current value. All inputs
+use milliseconds, so no arithmetic is performed on private times. SetMinMaxValues
+and SetValue explicitly allow secret arguments from tainted addon code.
+Channels use a coloured background covered by the native elapsed fill from the
+right, leaving the remaining portion visible without subtracting private times.
+Missing timing hides the cast. No duration-object binding, secure-execution
+proxy, native cast-frame mutation or combat-log fallback is used.
+
+Power and cast events plus the existing 0.1-second refresh maintain the bars.
+Both displays are owned, non-interactive children below the health rectangle;
+pool cleanup hides them and clears spell text/icon. Tests cover power changes,
+ordinary and opaque cast display inputs, cast/channel direction, interruption,
+unavailable timing, spacing, pooled reuse and both persistent options.
+The fixtures verify addon behavior, not live API permission or C++ rendering.
+
 Classic Era UI/API snapshot, Interface 11509:
 https://github.com/Gethe/wow-ui-source/tree/4192ac60067fc55566182291bc67c85dd9b6794d/Interface/AddOns
 

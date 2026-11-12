@@ -230,7 +230,7 @@ function A.RefreshList()
                     local r, g, b = difficulty.r, difficulty.g, difficulty.b
                     if QuestDifficultyColors and difficulty == QuestDifficultyColors.trivial then r, g, b = 0.75, 0.75, 0.75 end
                     local levelText = string.format("|cff%02x%02x%02x[%s]|r",
-                        math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5), item.level)
+                        math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5), A.QuestLevel(item))
                     row.title:SetText(levelText .. " " .. item.name)
                     row.title:SetTextColor(item.complete == 1 and 0.3 or 1, 1, item.complete == 1 and 0.3 or 1)
                     row.detail:SetText(item.zone .. (item.tag and (" · " .. item.tag) or "") .. (item.complete == 1 and " · Ready to turn in" or (item.complete == -1 and " · Failed" or "")))
@@ -676,7 +676,7 @@ events:SetScript("OnEvent", function(_, event, ...)
             if command:lower() == "diag" then
                 A.Refresh(true)
                 local _, build, _, interface = GetBuildInfo()
-                local version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")) or "1.4.2"
+                local version = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")) or "1.4.4"
                 print("ElmoLFG " .. version .. " · build " .. build .. " · interface " .. interface .. " · " .. #A.quests .. " quests · " .. #A.AvailableDungeons() .. "/" .. #A.dungeons .. " dungeons")
             else A.Toggle() end
         end

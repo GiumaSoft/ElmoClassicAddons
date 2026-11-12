@@ -17,7 +17,11 @@ C_QuestLog = {
     GetLogIndexForQuestID = function(id)
         for index, row in ipairs(log) do if row.id==id then return index end end
     end,
-    GetQuestTagInfo = function(id) return {tagName='Group'} end,
+    GetQuestTagInfo = function(id)
+        for _, row in ipairs(log)do
+            if row.id==id then return {tagName=row.tag or 'Group',tagID=row.tagID,isElite=row.elite} end
+        end
+    end,
     IsComplete = function(id)
         for _, row in ipairs(log) do if row.id==id then return row.complete==1 end end
         return false
@@ -42,6 +46,46 @@ class ForeverTests(unittest.TestCase):
         for name in ('Data.lua', 'Core.lua', 'Roles.lua'):
             self.lua.execute((ROOT/name).read_text(), 'ElmoLFG', self.lua.globals().A)
         self.lua.execute("A.InitializeDB(); A.ReadQuests(true); A.db.channel='channel:LookingForGroup'")
+
+    def test_dungeon_send_avoids_raw_role_pipes_and_preserves_native_quest_links(self):
+        self.lua.execute("""
+        level=37;A.db.selected={['d:smcath']=true};A.SetPlayerRole('dps')
+        setParty({{name='Tank',role='TANK'}})
+        A.SetAnnouncementText('- /w me inv (autojoin)')
+        local original=C_ChatInfo.SendChatMessage
+        C_ChatInfo.SendChatMessage=function(message,...)
+            assert(not message:find('| ',1,true),'SendChatMessage(): Invalid escape code in chat message')
+            return original(message,...)
+        end
+        local ok,reason=A.SendAnnouncement();assert(ok,reason)
+        assert(sent[1].message=='LFM Scarlet Monastery - Cathedral need 1 Heal / 2 Dps - /w me inv (autojoin)')
+        now=130;A.db.selected['q:147']=true
+        A.SetAnnouncementText(C_QuestLog.GetQuestLink(147)..' ready')
+        ok,reason=A.SendAnnouncement();assert(ok,reason)
+        local wire,err,bytes=A.BuildMessage(true)
+        assert(not err and bytes==#wire and sent[2].message==wire)
+        assert(wire:find('|Hquest:147:10|h',1,true) and wire:find('need 1 Heal / 2 Dps',1,true))
+        """)
+
+    def test_native_tag_ids_label_elite_and_dungeon_quests_in_both_link_formats(self):
+        self.lua.execute('''
+        log[2].level=38;log[2].tagID=1;log[2].tag='Groupe'
+        log[3].level=38;log[3].tagID=81;log[3].tag='Donjon';log[3].elite=true
+        A.ReadQuests(false);A.db.selected={['q:147']=true,['q:83']=true}
+        assert(A.QuestLevel(A.quests[1])=='38+' and A.QuestLevel(A.quests[2])=='38D')
+        for _,questie in ipairs({false,true})do
+            Questie=questie and {started=true} or nil
+            local preview,err,bytes=A.BuildMessage()
+            local wire=A.BuildMessage(true)
+            assert(not err and bytes==#wire)
+            assert(preview:find('[38+]',1,true) and preview:find('[38D]',1,true))
+            assert(wire:find('[38+]',1,true) and wire:find('[38D]',1,true))
+        end
+        log[2].tagID=nil;log[2].elite=true;A.ReadQuests(false)
+        assert(A.QuestLevel(A.quests[1])=='38+')
+        log[2].elite=false;log[2].tag='Unknown';A.ReadQuests(false)
+        assert(A.QuestLevel(A.quests[1])=='38')
+        ''')
 
     def test_collapsed_quests_need_no_header_or_selection_changes(self):
         self.lua.execute('''
@@ -112,7 +156,7 @@ class ForeverTests(unittest.TestCase):
         Questie={started=true}; log[2].id=96393; A.ReadQuests(true)
         A.db.selected['q:96393']=true
         assert(A.SendAnnouncement())
-        assert(sent[1].message:find('[[10] Manhunt (96393)]',1,true))
+        assert(sent[1].message:find('[[10+] Manhunt (96393)]',1,true))
         ''')
 
     def test_window_loads_and_refreshes_with_only_modern_quest_apis(self):

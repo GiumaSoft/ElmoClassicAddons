@@ -81,7 +81,7 @@ class ElmoLFGComposerTests(unittest.TestCase):
         self.check("""
             ElmoLFGCustomMessage:SetText('');local message,err=A.BuildMessage();assert(not err)
             assert(message=='LFM Gnomeregan need 1 Tank | 1 Heal | 2 Dps')
-            assert(A.SendAnnouncement() and sent[1].message==message)
+            assert(A.SendAnnouncement() and sent[1].message==A.BuildMessage(true))
         """)
 
     def test_custom_text_survives_activity_changes(self):
@@ -112,7 +112,22 @@ class ElmoLFGComposerTests(unittest.TestCase):
         self.check("""
             ElmoLFGCustomMessage:SetText('friendly run');setParty({{name='Alice',role='TANK'}})
             fire('GROUP_ROSTER_UPDATE');click('Post announce')
-            assert(#sent==1 and sent[1].message=='LFM Gnomeregan need 1 Heal | 2 Dps friendly run')
+            assert(#sent==1 and sent[1].message=='LFM Gnomeregan need 1 Heal / 2 Dps friendly run')
+        """)
+
+    def test_cathedral_post_does_not_send_invalid_role_escape_codes(self):
+        self.check("""
+            level=37;A.db.selected={['d:smcath']=true};A.SetPlayerRole('dps')
+            setParty({{name='Tank',role='TANK'}})
+            ElmoLFGCustomMessage:SetText('- /w me inv (autojoin)');fire('GROUP_ROSTER_UPDATE')
+            local original=SendChatMessage
+            SendChatMessage=function(message,...)
+                assert(not message:find('| ',1,true),'SendChatMessage(): Invalid escape code in chat message')
+                return original(message,...)
+            end
+            click('Post announce')
+            assert(#sent==1,'Dungeon announcement was rejected by the chat API')
+            assert(sent[1].message=='LFM Scarlet Monastery - Cathedral need 1 Heal / 2 Dps - /w me inv (autojoin)')
         """)
 
     def test_guild_repeats_rebuild_roles_with_the_custom_tail(self):
@@ -130,14 +145,14 @@ class ElmoLFGComposerTests(unittest.TestCase):
             fire('CHAT_MSG_WHISPER','inv tank','Alice-Realm');setParty({{name='Alice'}})
             fire('GROUP_ROSTER_UPDATE');now=130;ticker();assert(A.announcementPending and #sent==1)
             click('Post announce');assert(#sent==2)
-            assert(sent[2].message=='LFM Gnomeregan need 1 Heal | 2 Dps friendly run')
+            assert(sent[2].message=='LFM Gnomeregan need 1 Heal / 2 Dps friendly run')
         """)
 
     def test_edit_in_chat_opens_the_current_assembled_message(self):
         self.check("""
             ElmoLFGCustomMessage:SetText('friendly run');setParty({{name='Alice',role='TANK'}})
             fire('GROUP_ROSTER_UPDATE');assert(A.EditAnnouncement())
-            assert(opened=='/4 LFM Gnomeregan need 1 Heal | 2 Dps friendly run')
+            assert(opened=='/4 LFM Gnomeregan need 1 Heal / 2 Dps friendly run')
         """)
 
     def test_byte_limit_includes_the_prefix_and_utf8(self):

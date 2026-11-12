@@ -5,12 +5,13 @@ One source project for the locally maintained Elmo addon family. Interface and m
 | Addon | Release | Clients |
 | --- | --- | --- |
 | ElmoLeveling | 1.6.7 | Classic Era 11509, Forever 16001 |
-| ElmoPlater | 2.3.2 | Classic Era 11509, Forever 16001 |
+| ElmoPlater | 2.4.0 | Classic Era 11509, Forever 16001 |
 | ElmoSpellTracker | 1.0.4 | Classic Era 11509, Forever 16001 |
 | ElmoQuestEnhanced | 1.2.1 | Classic Era 11509, Forever 16001 |
-| ElmoLFG | 1.4.2 | Classic Era 11509, Forever 16001 |
+| ElmoLFG | 1.4.4 | Classic Era 11509, Forever 16001 |
+| ElmoLFM | 1.0.7 | Classic Era 11509, Forever 16001 |
 | ElmoRare | 1.0.0 | Classic Era 11509, Forever 16001 |
-| ElmoBuff | 1.0.1 | Classic Era 11509, Forever 16001 |
+| ElmoBuff | 1.0.2 | Classic Era 11509, Forever 16001 |
 
 `ElmoLeveling/` is the single implementation shared by both clients. `Compat.lua` and `TalentBranches.lua` adapt available APIs; `scripts/build.py` generates the small `Client.lua` selector and each client manifest. All other runtime files are identical between the two packages. The other addons also share their runtime across both clients. ElmoQuestEnhanced has an Options > AddOns panel for quest completions, multi-objective completions and optional kill/item progress reports to the current group. Client restrictions are preserved: unavailable combat-log timing is not fabricated.
 
@@ -33,7 +34,7 @@ code between clients. Its tests are in `scripts/tests/ElmoLFG`.
 
 Repository layout: the `Elmo*` addon folders are at the root. Build and maintenance tools and tests live under `scripts/`. Generated `.build/`, `.build-report.json` and `dist/` remain ignored by Git.
 
-All seven addons are accessible from **Options > AddOns** under their Elmo names. Basic switches are available directly; spell bar settings and the LFG window open from their corresponding pages. Current Elmo commands and saved preferences are preserved.
+All eight addons are accessible from **Options > AddOns** under their Elmo names. Basic switches are available directly; spell bar settings and the LFG window open from their corresponding pages. Current Elmo commands and saved preferences are preserved.
 
 ElmoRare uses native nameplate, target and mouseover units for rare/rare-elite
 alerts, with sound and a hover tooltip. `/erare` opens its options and `/erare test`
@@ -48,7 +49,14 @@ confirmed. Rebuffs are available outside combat. `/ebuff` opens its native
 options. See `ElmoBuff/README.md`; Lua 5.1 simulated checks are in
 `scripts/tests/ElmoBuff/test_addon.py`.
 
-ElmoPlater retains fixed 2x health bars, personal debuffs and native quest
+ElmoPlater retains fixed 2x health bars, adds optional mana and casting bars,
+and shows personal debuffs and native quest
 kill markers. Priority rules/editors, engagement tracking and custom cross-plate
 layer ordering have been removed from the shared runtime. `/eplater` opens its
 native options page.
+
+ElmoLFM searches native WHO results by zone and level range, whispers selected
+players once and optionally invites contacted players who reply inv. Open
+`/elfm` or Options > AddOns > ElmoLFM. No public announcements are sent.
+Right-clicking a player row requests a direct group invitation.
+Its independent Lua 5.1 checks are in `scripts/tests/ElmoLFM/test_addon.py`.

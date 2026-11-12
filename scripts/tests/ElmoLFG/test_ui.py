@@ -102,6 +102,21 @@ class ElmoLFGUITests(unittest.TestCase):
             self.lua.execute((ROOT/file).read_text(),'ElmoLFG',self.lua.globals().A)
         self.lua.execute("fire('ADDON_LOADED','ElmoLFG'); A.Toggle()")
 
+    def test_quest_rows_display_elite_and_dungeon_level_suffixes(self):
+        self.lua.execute('''
+            log[2].level=38;log[2].tag='Elite'
+            log[3].level=38;log[3].tag='Dungeon';A.Refresh(true)
+            local titles={}
+            for _,f in ipairs(frames)do
+                if f.data and f.data.key and f.title and f:IsShown()then
+                    titles[f.data.key]=f.title:GetText()
+                end
+            end
+            assert(titles['q:147']:find('[38+]',1,true))
+            assert(titles['q:83']:find('[38D]',1,true))
+            assert(#sent==0)
+        ''')
+
     def test_role_dialog_assignments_update_the_composer(self):
         self.lua.execute('''
             A.db.selected['d:dm']=true;A.SetPlayerRole('tank')
