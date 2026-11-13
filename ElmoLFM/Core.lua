@@ -1,6 +1,6 @@
 local addonName, A = ...
 ElmoLFM = A
-A.version = "1.0.7"
+A.version = "1.0.8"
 A.results, A.selected, A.contacts, A.tickets, A.invites = {}, {}, {}, {}, {}
 A.WHO_TIMEOUT, A.CONTACT_DELAY, A.REPLY_WINDOW = 120, 300, 600
 local frame, elapsed = CreateFrame("Frame"), 0

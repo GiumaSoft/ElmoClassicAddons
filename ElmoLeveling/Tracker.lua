@@ -1,6 +1,6 @@
 local _, A = ...
 _G.ElmoLeveling = A
-A.version = "2.0.1"
+A.version = "2.2.0"
 local number = A.IsNumber
 
 local function progress()
@@ -86,6 +86,7 @@ function A.Reset()
     A.db.xp, A.db.measurementAt, A.db.xpGap = 0, now, nil
     A.last, A.expectedLevel = progress(), nil
     A.Bags.Reset()
+    A.Sales.Reset()
     A.UI.Update()
 end
 
@@ -112,8 +113,10 @@ function A.Command(text)
     elseif command == "lock" then A.SetLocked(true)
     elseif command == "unlock" then A.SetLocked(false)
     elseif command == "center" then A.db.position = nil; A.SetVisible(true); A.UI.Place()
+    elseif command == "options" then A.UI.OpenOptions()
+    elseif command == "details" then A.UI.ToggleLevels()
     else
         A.Print("/elvl: show/hide. /elvl start | reset: restart elapsed time and earned XP.")
-        A.Print("/elvl lock | unlock | center. /elmoleveling is also available.")
+        A.Print("/elvl lock | unlock | center | details | options. /elmoleveling is also available.")
     end
 end

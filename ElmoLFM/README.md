@@ -1,4 +1,4 @@
-# ElmoLFM 1.0.6
+# ElmoLFM 1.0.8
 
 Local recruitment for **Classic Era 1.15.9** and **WoW Forever 1.60.1**, in the dark
 and bronze Elmo style. No dependency on ElmoLFG, Questie or another addon.
@@ -25,7 +25,10 @@ The minimap button is visible by default. Left-click opens recruitment, right-cl
    other areas. Zone and level fields prepare the native query; ElmoLFM applies
    no additional zone or level filtering to its results.
    **Right-click a player's row to invite them directly**, without sending a
-   whisper first. Left-click continues to select players. Direct invitations
+   whisper first. **Left-click a player's row to open a whisper** in Blizzard's
+   chat editor; type your message and press Enter to send it. Use the checkboxes
+   for batch selection. Opening a whisper does not set the Sent check or enable
+   automatic reply invitations. Direct invitations
    work with Auto-invite disabled and do not set the Sent check.
 3. Edit the whisper message and review its expanded preview.
    `{zone}`, `{min}` and `{max}` are optional placeholders.

@@ -1,4 +1,4 @@
-# ElmoPlater 2.4.0
+# ElmoPlater 2.4.1
 
 Classic Era / Forever nameplates with solid reaction colours, contrasting
 borders, health percentage, mana, casting, difficulty-coloured levels and your harmful debuffs.
@@ -36,7 +36,7 @@ Open **Options > AddOns > ElmoPlater**, or `/eplater` (`/elmoplater`), for:
 
 - Show/hide the quest kill knife.
 - Debuff icon size, from 14 to 36 pixels.
-- Show/hide mob mana bars.
+- Show/hide caster NPC mana bars.
 - Show/hide mob casting bars.
 
 Settings are saved per character in ElmoPlaterDB. Former-addon importers and
@@ -47,10 +47,13 @@ that display or restricts aura data.
 
 ## Mana and casting
 
-A thin blue mana bar appears below the health bar for mobs using mana with a
-nonzero maximum. It remains visible at zero current mana. Other power types
-are omitted. Protected current/max mana values go directly to Blizzard's
-status-bar display methods.
+A thin blue mana bar appears only for NPCs whose readable native class is
+Mage, Priest, Warlock, Paladin, Shaman or Druid and whose power type is mana.
+Warrior, Rogue, Hunter, player units and unknown/private classes are omitted,
+even if the client reports a mana resource. A caster does not need to be casting
+at that moment. A public zero maximum hides the bar; zero current mana keeps it
+visible. Protected current/max mana values go directly to Blizzard's status-bar
+display methods without comparison or arithmetic.
 
 The casting bar appears below mana, or directly below health when mana is
 absent. It includes the spell icon and name. Ordinary casts fill in gold;

@@ -47,7 +47,9 @@ local function getRow(index)
     row:SetScript("OnClick", function(self, button)
         if button == "RightButton" then
             if self.player then A.InvitePlayer(self.player.name) end
-        elseif button == "LeftButton" then selectPlayer(self) end
+        elseif button == "LeftButton" and self.player then
+            A.Call(ChatFrameUtil and ChatFrameUtil.SendTell or ChatFrame_SendTell, self.player.name)
+        end
     end)
     row.check:SetScript("OnClick", function() selectPlayer(row) end)
     local function tooltip()
@@ -68,7 +70,8 @@ local function getRow(index)
         elseif A.invites[p.key] and GetTime() < A.invites[p.key].expires then
             GameTooltip:AddLine("Invite requested", .75, .75, .75)
         end
-        GameTooltip:AddLine("Left-click: select. Right-click: invite to your group.", 1, .82, 0, true)
+        GameTooltip:AddLine("Left-click: whisper. Right-click: invite to your group.", 1, .82, 0, true)
+        GameTooltip:AddLine("Use the checkbox to select for Send selected.", .75, .75, .75, true)
         GameTooltip:AddLine("Online in WHO results; group availability is confirmed by reply.", .75, .75, .75, true)
         GameTooltip:Show()
     end
@@ -181,7 +184,7 @@ function U.Create()
     frame.query = input(frame, 18, -132, 722)
     frame.query:SetHeight(20); frame.query:SetMaxLetters(260)
     frame.query:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
-    label(frame, "Select players · Right-click to invite", 18, -162, 360, "GameFontNormal")
+    label(frame, "Left-click: whisper · Right-click: invite", 18, -162, 360, "GameFontNormal")
     frame.import = Theme.Button(frame, "Import WHO list", 142, 390, -156, U.ImportWho)
     frame.selectAll = Theme.Button(frame, "Select all", 94, 542, -156, function()
         for _, player in ipairs(A.results) do if A.Contactable(player) then A.selected[player.key] = true end end

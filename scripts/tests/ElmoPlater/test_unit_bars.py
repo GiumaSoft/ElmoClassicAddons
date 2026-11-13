@@ -23,6 +23,11 @@ function issecretvalue(value) return secrets[value] == true end
 function methods:SetText(value)
     if issecretvalue(value) then self.opaqueText=value else text(self,value) end
 end
+function UnitClass(unit)
+    local mob=MOCK.units[unit]
+    if mob and not mob.noClass then return 'Localized NPC class',mob.classFile or 'MAGE' end
+end
+function UnitIsPlayer(unit) return MOCK.units[unit] and MOCK.units[unit].isPlayer or false end
 function UnitPowerType(unit) return MOCK.units[unit] and MOCK.units[unit].powerType or 0 end
 function UnitPower(unit, power)
     assert(power==0);return MOCK.units[unit] and MOCK.units[unit].mana or 0
@@ -89,6 +94,36 @@ class UnitBarsTests(unittest.TestCase):
         assert(rawequal(f.mana.bar.maximum,mob.maxMana) and f.mana.bar.minimum==0)
         mob.powerType=MOCK.secret();A.Update(false)
         assert(not f.mana:IsShown() and f:IsShown())
+        """)
+
+    def test_noncasters_and_players_do_not_show_private_or_public_mana(self):
+        self.check("""
+        local mob=MOCK.mob('nameplate1');local f=A.units.nameplate1.frame
+        mob.mana,mob.maxMana=500,1000
+        for _,class in ipairs({'WARRIOR','ROGUE','HUNTER','DEATHKNIGHT','UNKNOWN'})do
+            mob.classFile=class;A.Update(false);assert(not f.mana:IsShown() and f:IsShown())
+        end
+        mob.classFile='WARRIOR';mob.mana,mob.maxMana=MOCK.secret(),MOCK.secret()
+        MOCK.castUnit('nameplate1',false,5);A.Update(false)
+        assert(not f.mana:IsShown() and f.cast:IsShown())
+        local _,y,_,h=MOCK.worldRect(f.cast);local _,healthY=MOCK.worldRect(f)
+        assert(y+h==healthY-2)
+        mob.classFile='MAGE';mob.isPlayer=true;A.Update(false)
+        assert(not f.mana:IsShown() and f.cast:IsShown())
+        """)
+
+    def test_caster_classification_is_public_and_recovers_without_waiting_for_a_cast(self):
+        self.check("""
+        local mob=MOCK.mob('nameplate1');local f=A.units.nameplate1.frame
+        mob.mana,mob.maxMana=0,1000
+        for _,class in ipairs({'MAGE','PRIEST','WARLOCK','PALADIN','SHAMAN','DRUID'})do
+            mob.classFile=class;A.Update(false)
+            assert(f.mana:IsShown() and f.mana.bar.value==0 and not f.cast:IsShown())
+        end
+        mob.classFile=MOCK.secret();A.Update(false);assert(not f.mana:IsShown())
+        mob.noClass=true;A.Update(false);assert(not f.mana:IsShown())
+        mob.noClass=false;mob.classFile='MAGE';A.Update(false);assert(f.mana:IsShown())
+        UnitClass=nil;A.Update(false);assert(not f.mana:IsShown() and f:IsShown())
         """)
 
     def test_native_cast_and_channel_ranges_icons_names_and_directions(self):

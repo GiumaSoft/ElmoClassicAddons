@@ -2,6 +2,7 @@ local _, A = ...
 local B = {}
 A.UnitBars = B
 local WHITE = "Interface\\Buttons\\WHITE8X8"
+local casterClasses = {MAGE = true, PRIEST = true, WARLOCK = true, PALADIN = true, SHAMAN = true, DRUID = true}
 
 local function bar(parent, height)
     local f = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
@@ -43,7 +44,12 @@ end
 
 local function mana(record)
     local f, unit = record.frame.mana, record.unit
-    if not A.db.showMana or A.Number(A.Call(UnitPowerType, unit)) ~= 0 then f:Hide(); return false end
+    local _, class = A.Call(UnitClass, unit)
+    class = A.Text(class)
+    if not A.db.showMana or A.Bool(A.Call(UnitIsPlayer, unit)) ~= false or
+        not (class and casterClasses[class]) or A.Number(A.Call(UnitPowerType, unit)) ~= 0 then
+        f:Hide(); return false
+    end
     local maximum, current = A.Call(UnitPowerMax, unit, 0), A.Call(UnitPower, unit, 0)
     local max, value = A.Number(maximum), A.Number(current)
     if not (A.Secret(maximum) or max and max > 0) or not (A.Secret(current) or value) then

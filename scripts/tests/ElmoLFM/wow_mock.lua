@@ -186,6 +186,11 @@ C_FriendList={
 ChatFrameUtil={OpenChat=function(command)
     if MOCK.openChatError then error("Chat unavailable") end
     MOCK.chatCommand=command
+end,SendTell=function(name)
+    for _,widget in ipairs(MOCK.frames)do
+        if widget:HasFocus() then widget:ClearFocus() end
+    end
+    MOCK.whisperTarget=name
 end,InsertLink=function(text)
     MOCK.nativeLink=text
     return false
@@ -254,6 +259,6 @@ function MOCK.legacy()
         if p then return p.fullName,p.fullGuildName,p.level,p.raceStr,p.classStr,p.area,p.filename end
     end
     SendChatMessage,InviteUnit=C_ChatInfo.SendChatMessage,C_PartyInfo.InviteUnit
-    ChatFrame_OpenChat,ChatFrameUtil=ChatFrameUtil.OpenChat,nil
+    ChatFrame_OpenChat,ChatFrame_SendTell,ChatFrameUtil=ChatFrameUtil.OpenChat,ChatFrameUtil.SendTell,nil
     C_FriendList,C_ChatInfo,C_PartyInfo=nil,nil,nil
 end

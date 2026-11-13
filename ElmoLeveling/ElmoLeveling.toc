@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: ElmoLeveling
-## Notes: Elapsed time, earned XP, time per level and usable equipment upgrades.
+## Notes: Sigillo leveling tracker: location, level progress, elapsed time, bag vendor value, session vendor sales and upgrades.
 ## Author: Giuseppe
-## Version: 2.0.1
+## Version: 2.2.0
 ## X-Curse-Project-ID: 1778256
 ## SavedVariablesPerCharacter: ElmoLevelingDB
 ## OptionalDeps: BetterBags

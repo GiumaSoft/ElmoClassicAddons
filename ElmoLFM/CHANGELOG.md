@@ -1,3 +1,10 @@
+# 1.0.8
+
+Left-click a player row to open Blizzard's whisper editor for that player.
+Right-click continues to invite them to the group. Checkboxes retain batch
+selection for Send selected. Opening the editor sends no message and does not
+change contact flags, replies or automatic invitation permissions.
+
 # 1.0.7
 
 Right-click a player row to request a group invitation directly. Left-click

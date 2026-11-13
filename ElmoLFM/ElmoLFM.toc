@@ -2,7 +2,7 @@
 ## Title: ElmoLFM
 ## Notes: Find players by zone and level, whisper selected players and invite interested replies.
 ## Author: Giuseppe
-## Version: 1.0.7
+## Version: 1.0.8
 ## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
 ## SavedVariablesPerCharacter: ElmoLFMDB
 

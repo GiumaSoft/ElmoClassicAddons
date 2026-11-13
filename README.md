@@ -4,14 +4,15 @@ One source project for the locally maintained Elmo addon family. Interface and m
 
 | Addon | Release | Clients |
 | --- | --- | --- |
-| ElmoLeveling | 2.0.1 | Classic Era 11509, Forever 16001 |
-| ElmoPlater | 2.4.0 | Classic Era 11509, Forever 16001 |
+| ElmoLeveling | 2.2.0 | Classic Era 11509, Forever 16001 |
+| ElmoPlater | 2.4.1 | Classic Era 11509, Forever 16001 |
 | ElmoSpellTracker | 1.0.4 | Classic Era 11509, Forever 16001 |
 | ElmoQuestEnhanced | 1.2.1 | Classic Era 11509, Forever 16001 |
 | ElmoLFG | 1.4.4 | Classic Era 11509, Forever 16001 |
-| ElmoLFM | 1.0.7 | Classic Era 11509, Forever 16001 |
+| ElmoLFM | 1.0.8 | Classic Era 11509, Forever 16001 |
 | ElmoRare | 1.0.0 | Classic Era 11509, Forever 16001 |
 | ElmoBuff | 1.0.2 | Classic Era 11509, Forever 16001 |
+| ElmoWaypoint | 1.2.0 | Classic Era 11509, Forever 16001 |
 
 `ElmoLeveling/` is the single implementation shared by both clients. `Compat.lua` and `TalentBranches.lua` adapt available APIs; `scripts/build.py` generates the small `Client.lua` selector and each client manifest. All other runtime files are identical between the two packages. The other addons also share their runtime across both clients. ElmoQuestEnhanced has an Options > AddOns panel for quest completions, multi-objective completions and optional kill/item progress reports to the current group. Client restrictions are preserved: unavailable combat-log timing is not fabricated.
 
@@ -34,7 +35,7 @@ code between clients. Its tests are in `scripts/tests/ElmoLFG`.
 
 Repository layout: the `Elmo*` addon folders are at the root. Build and maintenance tools and tests live under `scripts/`. Generated `.build/`, `.build-report.json` and `dist/` remain ignored by Git.
 
-All eight addons are accessible from **Options > AddOns** under their Elmo names. Basic switches are available directly; spell bar settings and the LFG window open from their corresponding pages. Current Elmo commands and saved preferences are preserved.
+All nine addons are accessible from **Options > AddOns** under their Elmo names. Basic switches are available directly; spell bar settings and the LFG window open from their corresponding pages. Current Elmo commands and saved preferences are preserved.
 
 ElmoRare uses native nameplate, target and mouseover units for rare/rare-elite
 alerts, with sound and a hover tooltip. `/erare` opens its options and `/erare test`
@@ -61,8 +62,23 @@ players once and optionally invites contacted players who reply inv. Open
 Right-clicking a player row requests a direct group invitation.
 Its independent Lua 5.1 checks are in `scripts/tests/ElmoLFM/test_addon.py`.
 
-ElmoLeveling 2.0.1 displays elapsed online time and earned XP in one compact
-session line and records time per level in an expandable history. Idle time
+ElmoLeveling 2.2.0 uses the Sigillo layout: a circular level/XP seal, current zone,
+rested XP and general-purpose free bag space. A header clock shows elapsed online
+time; remaining XP appears once below the subzone in a 15-point caption. The
+antialiased seal uses generated artwork and the native radial renderer when
+available, with unsharpened masked textures on older clients. Moon and backpack
+icons accompany rested XP and free slots. Separate In bags and Sold · session
+counters show carried vendor value and gross recorded vendor-sale income. The subzone
+falls back to the minimap name when available. Time per level
+is recorded in an expandable history. Idle time
 counts. Mob XP records, kill timing and respawn sampling are removed. Purple
 equipment upgrade borders retain their rules; class/specialization mappings,
 weights and comparison formulas are in `ElmoLeveling/UPGRADE_RULES.md`.
+
+ElmoWaypoint adds `/way x y [note]`, circular map/minimap pins with note tooltips,
+a movable directional arrow, a live coordinate frame and a minimap launcher.
+`/way current [note]` saves the character's exact current position. Right-click
+the launcher for native options and Reset all waypoints.
+Points and preferences are saved per character. `/ewp` is an unambiguous alias;
+TomTom retains its alternative commands. See `ElmoWaypoint/README.md` and
+`scripts/tests/ElmoWaypoint/test_addon.py`.

@@ -1,5 +1,5 @@
 -- Strict fixture: only frame methods and native APIs used by this addon exist.
-MOCK = {time = 100, xp = 100, maximum = 400, level = 1, frames = {}, messages = {},
+MOCK = {time = 100, money = 0, buyback = {}, xp = 100, maximum = 400, level = 1, frames = {}, messages = {},
     bags = {}, slots = {[0] = 16}, items = {}, requests = {}, loadedAddons = {}, scanCalls = 0,
     units = {}, mobSerial = 0, chatSerial = 0, class = "HUNTER", talents = {}, equipped = {}}
 local methods = {}
@@ -41,6 +41,30 @@ function methods:SetOwner(owner, anchor) self.owner, self.anchor = owner, anchor
 function methods:AddLine(text) self.lines = self.lines or {}; table.insert(self.lines, text) end
 function methods:CreateFontString() return CreateFrame("FontString", nil, self) end
 function methods:CreateTexture() return CreateFrame("Texture", nil, self) end
+function methods:CreateLine() return CreateFrame("Line", nil, self) end
+function methods:CreateMaskTexture() return CreateFrame("MaskTexture", nil, self) end
+function methods:AddMaskTexture(mask) self.mask = mask end
+function methods:RemoveMaskTexture(mask) assert(self.mask == mask); self.mask = nil end
+function methods:SetVertexColor(...) self.vertexColor = {...} end
+function methods:SetSnapToPixelGrid(value) self.snapToPixelGrid = value end
+function methods:SetTexelSnappingBias(value) self.texelSnappingBias = value end
+function MOCK.enableRadialAPI()
+    function methods:SetRadialProgressBarPercent(value)
+        assert(self.kind == 'Texture' and value >= 0 and value <= 1)
+        self.radialPercent = value
+    end
+    function methods:SetRadialProgressBarReverse(value) self.radialReverse = value end
+    function methods:SetRadialProgressBarFeather(value) self.radialFeather = value end
+end
+function methods:SetThickness(value) self.thickness=value end
+function methods:SetStartPoint(...) self.start={...} end
+function methods:SetEndPoint(...) self.finish={...} end
+function methods:SetColorTexture(...) self.color={...} end
+function methods:SetTexture(value) self.texture=value end
+function methods:SetTexCoord(...) self.texCoord={...} end
+function methods:IsOwned(owner) return self.owner==owner end
+function methods:SetFont(font,size,flags) self.font,self.fontSize,self.fontFlags=font,size,flags end
+function methods:GetStringWidth() return #MOCK.plain(self:GetText())*(self.fontSize or 12)*.55 end
 function CreateFrame(kind, name, parent, template)
     local frame = setmetatable({kind = kind, name = name, parent = parent, template = template,
         shown = true, scripts = {}, events = {}, mouseEnabled = kind == 'Button',
@@ -55,9 +79,47 @@ BackdropTemplateMixin = {}
 SlashCmdList = {}
 DEFAULT_CHAT_FRAME = {AddMessage = function(_, message) table.insert(MOCK.messages, message) end}
 function GetTime() return MOCK.time end
+function GetMoney() return MOCK.money end
+function GetNumBuybackItems() return #MOCK.buyback end
+function GetBuybackItemInfo(index)
+    local row = MOCK.buyback[index]
+    if row then return row.name or ('Item '..row.id), 123, row.price, row.count end
+end
+function GetBuybackItemLink(index)
+    local row = MOCK.buyback[index]
+    return row and ('item:'..row.id)
+end
 function UnitAffectingCombat(unit) assert(unit == "player"); return MOCK.combat == true end
 function UnitXP(unit) assert(unit == "player"); return MOCK.xp end
 function UnitXPMax(unit) assert(unit == "player"); return MOCK.maximum end
+
+function MOCK.merchantAPI()
+    C_Container.UseContainerItem = function() MOCK.useCalls=(MOCK.useCalls or 0)+1; return 77,'native' end
+    C_Container.PickupContainerItem = function() end
+    SellCursorItem = function() end
+    C_MerchantFrame = {SellAllJunkItems=function() end}
+end
+function MOCK.receipt(id, count, price)
+    table.insert(MOCK.buyback,{id=id,count=count,price=price})
+    if #MOCK.buyback>12 then table.remove(MOCK.buyback,1) end
+end
+function MOCK.saleEffects(bag,slot)
+    local info=assert(MOCK.bags[bag][slot])
+    local price=MOCK.items[info.hyperlink].price*info.stackCount
+    MOCK.receipt(info.itemID,info.stackCount,price)
+    MOCK.bags[bag][slot]=nil;MOCK.money=MOCK.money+price
+end
+function MOCK.sell(bag,slot)
+    C_Container.UseContainerItem(bag,slot)
+    MOCK.saleEffects(bag,slot)
+    MOCK.event('MERCHANT_UPDATE');MOCK.event('PLAYER_MONEY');MOCK.advance(1)
+end
+
+function GetXPExhaustion() return MOCK.rested end
+function GetRealZoneText() return MOCK.zone or 'Duskwood' end
+function GetZoneText() return MOCK.zone or 'Duskwood' end
+function GetSubZoneText() return MOCK.subzone or 'Raven Hill' end
+function GetMinimapZoneText() return MOCK.minimapZone or MOCK.zone or 'Duskwood' end
 function UnitLevel(unit) return unit == "player" and MOCK.level or (MOCK.units[unit] and MOCK.units[unit].level or 0) end
 function UnitGUID(unit)
     if unit == "player" then return "Player-Test" end
@@ -130,6 +192,11 @@ function MOCK.bagChange()
 end
 
 C_Container = {}
+function C_Container.GetContainerNumFreeSlots(bag)
+    local count=0
+    for slot=1,MOCK.slots[bag] or 0 do if MOCK.bags[bag] and MOCK.bags[bag][slot]then count=count+1 end end
+    return (MOCK.slots[bag] or 0)-count,MOCK.bagFamilies and MOCK.bagFamilies[bag] or 0
+end
 function C_Container.GetContainerNumSlots(bag)
     assert(bag >= 0 and bag <= 4, "Only the backpack and carried bags may be scanned")
     MOCK.scanCalls = MOCK.scanCalls + 1

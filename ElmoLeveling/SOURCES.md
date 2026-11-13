@@ -1,88 +1,117 @@
-# Sources and compatibility
+# ElmoLeveling implementation references
 
-Original standalone tracker code ported from ClassicLeveling 1.6.3. UI and
-messages remain English. No external addon libraries or other addons' code are
-bundled. The small TalentBranches.lua table contains numeric spell-to-branch
-facts from the installed TalentsForeverBook data for build 1.60.1.70425; actual
-ownership and ranks always come from the current native trait configuration.
-Definitions are matched by spell ID, so reassigned node IDs cannot inherit an
-old talent's branch. Unknown spells are ignored. TalentsForeverBook is not a
-runtime dependency.
+The same Lua implementation serves Classic Era and Forever. `scripts/build.py`
+selects interface 11509/16001 and writes the small client selector. ElmoLevelingDB
+is per-character; installation never edits SavedVariables files.
 
-Local target: WoW Forever 1.60.1.70685, interface 16001, product wowf, verified
-from the installed .build.info and Camelot addon manifests on 2026-10-30.
+## Session and time per level
 
-Primary UI/API reference: Blizzard UI source mirror Gethe/wow-ui-source,
-forever branch, pinned revision ca8368f2f2380cbe696854f7f2646387c278a61b.
+Actual XP comes from public UnitXP, UnitXPMax and UnitLevel snapshots plus
+PLAYER_XP_UPDATE and PLAYER_LEVEL_UP. Elapsed time uses GetTime and saved online
+seconds, including idle time. Multiple unobserved level transitions remain
+unknown; no award, rate or historical level duration is invented.
 
-- [XP, unit identity and levels](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua)
-- [Combat restrictions and absent Classic event reader](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/CombatLogDocumentation.lua)
-- [XP chat event](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/ChatInfoDocumentation.lua)
-- [Item stats, prices and uniqueness](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua)
-- [Native usability](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/PlayerInfoDocumentation.lua)
-- [Native tooltip data](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/TooltipInfoDocumentation.lua)
-- [Traits and live ranks](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/SharedTraitsDocumentation.lua)
-- [Spellbook eligibility](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpellBookDocumentation.lua)
-- [Native combined/individual bag rendering](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_UIPanels_Game/Mainline/ContainerFrame.lua)
-- [Camelot bag overrides](https://github.com/Gethe/wow-ui-source/blob/ca8368f2f2380cbe696854f7f2646387c278a61b/Interface/AddOns/Blizzard_UIPanels_Game/Camelot/ContainerFrame.lua)
+RequestTimePlayed and TIME_PLAYED_MSG can recover the current level's played
+time. Earlier completed levels cannot be recovered this way. The request uses
+the native API without replacing chat handlers. See Blizzard's
+[native /played handling](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_ChatFrameBase/Shared/SlashCommands.lua).
 
-Secure post-hooks observe SetItemButtonQuality for modern native bag buttons,
-and the installed BetterBags 0.8.4 ItemFrame FinishItemDraw/ResetVisuals methods.
-BetterBags files are neither modified nor bundled. GetBagID belongs to each
-button in combined bags; the parent container ID is not used as the displayed
-bag ID. Borders are independent mouse-disabled child frames.
+## Sigillo UI
 
-Secret values are rejected. Restricted combat readers are not invoked; invalid
-or restricted events cannot abort loading. Readable mob XP notices provide
-history when combat log APIs are absent. Unknown mob levels, timing and XP/s
-remain unknown. Relative gear weights are heuristics inherited from the Era
-tracker, not a simulation of Forever balance, procs or sets.
+The refined layout displays the session clock in the header and one remaining-XP
+caption below the subzone. Remaining XP uses the current readable UnitXPMax
+minus UnitXP and is independent of the saved session XP accumulator. Restart
+does not change it. The header clock uses the native measured string width to
+fit long durations; the subzone uses a 14-point font, the remaining-XP caption
+15 points and the seal percentage 13 points. Details retains
+the same width while expanding below the 218-pixel compact panel.
 
-Only ElmoLevelingDB holds the tracker profile. Former-addon importers are no longer included or loaded. Existing Elmo profiles are preserved; the installer does not modify SavedVariables files.
+GetRealZoneText/GetZoneText supply the zone. GetSubZoneText supplies the subzone,
+with GetMinimapZoneText as a fallback when it is blank or repeats the zone.
+Only public, trimmed, distinct names are shown; otherwise the line stays empty.
+Zone-change events refresh it, with a one-second update
+as a fallback. A previous subzone is never retained after leaving it.
 
-Development checks live in scripts/tests/leveling_era and scripts/tests/leveling_forever. They use simulated APIs and do not constitute live-client verification.
+[GetXPExhaustion](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/PlayerScriptDocumentation.lua)
+supplies the remaining rested-XP pool. Its ratio to UnitXPMax is displayed as a
+percentage of a level, not a bonus rate. A successful nil return means no pool;
+an unavailable, failed or private return remains unknown. UPDATE_EXHAUSTION and
+PLAYER_UPDATE_RESTING refresh the display. The preview clips at the end of the
+current level while the numeric pool can exceed 100%.
 
-Session Combat uses PLAYER_REGEN_DISABLED / PLAYER_REGEN_ENABLED and initializes
-from the readable UnitAffectingCombat("player") state. It does not require combat
-log access. combatSeconds is saved alongside total seconds; both clocks exclude
-offline time, and active combat is restarted at Reset. Older profiles retain
-Total with Combat starting at zero. The displayed bag counter is now only
-Bags (sell value); the legacy bag-baseline field remains readable for profile
-compatibility but has no visible change counter.
+[C_Container.GetContainerNumFreeSlots](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/ContainerDocumentation.lua)
+returns free slots and bag family. Only readable, valid counts in general bags
+(family zero) are added across backpack and carried bags 0–4. Ammo, herb and
+other specialized bags are excluded from ordinary loot-space totals. Missing
+data displays an unknown count rather than a partial total. Existing vendor
+value scanning still includes all carried items and pending prices.
 
+The seal uses an original 256×256 antialiased annulus texture. When the client
+provides [SetRadialProgressBarPercent](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleTextureBaseAPIDocumentation.lua),
+the renderer clips one whole texture for each earned/rested arc. There are no
+quadrant joins, cooldown clocks or animation timers in that path. Capability
+detection, rather than the client name, selects it.
 
-Respawn means use the exact readable NPC name as their only grouping key.
-Credited kill times enter a bounded FIFO; the first newly observed living GUID
-with that name consumes one wait, including mobs at other levels. Public dead to
-alive transitions also qualify. Known living GUIDs suppress repeated observations;
-up to 1000 identities are retained per area. A five-second public-sighting cache
-handles XP-backed kills whose rows settle after their first reappearance.
-Samples publish every five seconds into saved total/count records, capped at
-100 names. Travel/login clears unfinished waits and observed identities. Clear
-preserves learned means; Reset clears means as well. Protected identities are
-never inspected or reconstructed. The observations estimate availability, not a
-server-provided spawn time.
+Older clients use four cropped quadrants for each earned/rested arc. A
+half-plane texture mask reveals the partially filled quadrant; completed
+quadrants have no mask. These owned
+[texture masks](https://github.com/Gethe/wow-ui-source/blob/classic_era/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleTextureAPIDocumentation.lua)
+are supported on both clients. Texture pixel-grid snapping and texel sharpening
+are disabled for every seal texture and mask, as in the installed TomTom and
+Questie renderers and [WeakAuras' circular progress textures](https://github.com/WeakAuras/WeakAuras2/blob/main/WeakAuras/BaseRegions/CircularProgressTexture.lua).
+This preserves linear filtering and fractional positions at arbitrary UI scales.
+Arc visibility and clipping update only when public XP/rested fractions change.
+The crown still uses native lines.
+Private values never enter arithmetic or texture coordinates. The panel does
+not observe targets, nameplates, combat logs or other players.
 
-Both displayed XP/min columns have a separate five-second refresh cadence.
-Actual XP awards and 60-second-window calculations stay immediate; Reset forces
-the visible counters to zero immediately. Delayed frames retain the cadence's
-phase. Shared client behavior passes 15 differential scenarios.
+Media/Panel.tga is an original 64×64 RGBA rounded nine-slice atlas. Reproduce it
+with `python3 scripts/leveling_panel.py` from the repository root. UI.lua retains
+its ten-pixel corners when Details expands. Reproduce Media/Ring.tga and
+Media/RingMask.tga with `python3 scripts/leveling_ring.py`. The annulus has a
+one-display-pixel alpha falloff at its 76-pixel UI size. Body and title fonts
+come from the game; no third-party font or image is bundled.
 
-Respawn averages are displayed in rounded whole seconds, e.g. 135s, in both the column and tooltip.
+Media/Moon.tga and Media/Backpack.tga are original 64×64 alpha line icons,
+displayed at 14 pixels next to the rested and free-slot labels. Reproduce them
+with `python3 scripts/leveling_icons.py`. The backpack follows the low-space
+label's gold warning color. These icons are decorative and do not intercept
+mouse input.
 
-Restricted clients also measure public per-GUID engagement intervals. A readable
-UnitAffectingCombat plus group UnitThreatSituation (including status 0), or a
-readable UnitIsUnit match from the mob's target to player/pet/party, starts timing.
-UNIT_FLAGS, UNIT_HEALTH and threat/target events update observations; the existing
-one-second scan catches missed events. Public death ends timing; a GUID-bearing
-XP notice can end it when the unit disappears. Name-only XP must match a unique
-observed corpse. Five seconds of grace allow death/XP to follow combat clearing;
-a repull resets that mob's start. Travel/reset discards unfinished observations.
-These intervals and derived XP/s show ~ and retain that marker in saved history.
-They do not replace Classic Era's combat-log timestamps. Interface 16000-16999
-never registers or reads the Blizzard-only combat-log event, even when the
-restriction flag is false outside combat. Primary API reference:
-https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua
-test_kill_timing.py adds twelve Lua 5.1 regressions for correlation, target changes,
-group/pet engagement, private values, repulls, reset/travel, persistence, UI
-formatting and the Forever combat-log guard. These are simulated checks.
+## Vendor sales
+
+The separate A.Sales observer in Bags.lua observes MERCHANT_SHOW, MERCHANT_UPDATE, MERCHANT_CLOSED and
+PLAYER_MONEY. Like Blizzard's [merchant UI](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_UIPanels_Game/Vanilla/MerchantFrame.lua),
+it reads GetNumBuybackItems, GetBuybackItemInfo and GetBuybackItemLink. Buyback
+price is already the total for the stack and is added once, without multiplying
+by quantity again. Retained rows are matched in order across updates to avoid
+counting old stock, repeated events and buybacks as new sales.
+
+Read-only secure post-hooks observe UseContainerItem, SellCursorItem,
+PickupContainerItem and SellAllJunkItems when present. They never replace or
+invoke those native actions. A sale request is not income by itself. Cached
+public bag quantities/prices and GetMoney corroborate actual removed items and
+received money when identical/full buyback lists or bulk sales lose receipt
+rows. Money and bag responses can arrive in either order. Gross visible
+receipts remain independent of unrelated wallet gains, purchases and repairs.
+Requests expire after ten seconds; uncertain amounts remain uncounted and a
+readable-data gap marks the counter as a lower bound. This is observation,
+not merchant automation, and has not yet been validated against live server
+transaction ordering.
+
+ElmoLevelingDB.vendorSales is the persistent nonnegative copper total for the
+current session. Restart resets it; wallet totals are never used as this
+counter. Sales made before tracking started are not inferred from a balance.
+
+## Equipment upgrades and verification
+
+UPGRADE_RULES.md describes the unchanged class/role formulas in Upgrades.lua.
+Native bags and BetterBags hooks remain independent of tracker visibility.
+Price times stack quantity determines carried vendor value; unavailable item
+data stays pending until the public item cache supplies it.
+
+Lua 5.1 fixtures in scripts/tests/leveling_era and leveling_forever execute the
+actual code. They cover sessions, rollover, idle time, logout/reload, level
+history, class profiles, bag comparisons, Sigillo data updates, unknown/private
+values, rested pools, specialized bags and expansion controls. Simulated APIs
+do not establish live-client rendering or permissions.

@@ -1,6 +1,6 @@
 # Native API references
 
-Reviewed against Blizzard's Forever UI source on 2026-11-11, through the
+Reviewed against Blizzard's Forever UI source on 2026-11-12, through the
 Gethe/wow-ui-source mirror:
 
 - [WHO search, returned fields and WHO_LIST_UPDATE](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/FriendListDocumentation.lua):
@@ -19,6 +19,10 @@ Gethe/wow-ui-source mirror:
   public reply for an existing contact, keyed by full name and realm, even when
   Auto-invite is disabled. Private arguments are ignored. Reply text is not saved
   in SavedVariables; displaying a reply does not extend invitation permission.
+- [Whisper editor](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_ChatFrameBase/Shared/ChatFrameUtil.lua):
+  row left-click calls ChatFrameUtil.SendTell (ChatFrame_SendTell on older clients)
+  with the full player name. It opens the native editor without sending a message;
+  the player types and presses Enter. Recruitment contact tracking is unchanged.
 - [Invitations](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/PartyInfoDocumentation.lua):
   C_PartyInfo.CanInvite and InviteUnit, used by row right-clicks and authorized
   auto-invite replies. Direct invitations require no prior whisper and leave

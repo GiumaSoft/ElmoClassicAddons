@@ -1,0 +1,23 @@
+## Interface: 16001
+## Title: ElmoWaypoint
+## Notes: /way coordinates, current-position waypoints, a movable coordinate display and navigation pins.
+## Author: Giuseppe
+## Version: 1.2.0
+## IconTexture: Interface\Icons\INV_Misc_Map_01
+## SavedVariablesPerCharacter: ElmoWaypointDB
+## OptionalDeps: TomTom
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\HereBeDragons\HereBeDragons-2.0.lua
+Libs\HereBeDragons\HereBeDragons-Pins-2.0.lua
+
+Core.lua
+Navigation.lua
+Pins.lua
+UI.lua
+Coordinates.lua
+Settings.lua
+Minimap.lua

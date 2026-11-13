@@ -2,7 +2,7 @@
 ## Title: ElmoPlater
 ## Notes: Native-position nameplates with health, mana, casting, personal debuffs and quest kill markers.
 ## Author: Giuseppe
-## Version: 2.4.0
+## Version: 2.4.1
 ## X-Curse-Project-ID: 1778264
 ## SavedVariablesPerCharacter: ElmoPlaterDB
 ## OptionalDeps: Blizzard_AuraContainer

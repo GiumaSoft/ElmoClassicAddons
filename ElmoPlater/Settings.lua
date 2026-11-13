@@ -41,7 +41,7 @@ function U.RegisterOptions()
         text:ClearAllPoints();text:SetPoint("LEFT",check,"RIGHT",4,0)
         check:SetScript("OnClick",function(self)A.db[key]=self:GetChecked()==true;A.Update(false)end)
     end
-    toggle("showMana","Show mob mana bar",-176)
+    toggle("showMana","Show caster NPC mana bar",-176)
     toggle("showCast","Show mob cast bar",-214)
     p:SetScript("OnShow",function()
         p.questKills:SetChecked(A.db.questKills);p.auraSize:SetText(tostring(A.db.plateAuraSize))

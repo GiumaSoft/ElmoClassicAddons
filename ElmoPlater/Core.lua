@@ -1,6 +1,6 @@
 local addonName, A = ...
 ElmoPlater = A
-A.version, A.records, A.units = "2.4.0", {}, {}
+A.version, A.records, A.units = "2.4.1", {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 

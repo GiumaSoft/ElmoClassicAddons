@@ -1,3 +1,11 @@
+# 2.4.1
+
+Show mana only for NPCs with a readable spellcasting class and mana power type.
+Exclude melee/Hunter classes, players and unknown/private classifications,
+including when a non-caster's mana values are protected. Empty current mana
+still displays for qualifying casters. Casting bars keep their independent
+behavior and close the space when mana is omitted.
+
 # 2.4.0
 
 Added optional mob mana and casting bars beneath health. Mana uses a thin blue

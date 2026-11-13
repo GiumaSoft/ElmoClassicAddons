@@ -559,28 +559,28 @@ class LevelingTests(unittest.TestCase):
 
 
 
-    def test_single_line_shows_actual_time_and_xp_including_idle(self):
+    def test_single_line_shows_actual_time_and_tnl_including_idle(self):
         self.check("""MOCK.start();MOCK.advance(60);MOCK.gain(100)
         local s=A.Stats();assert(s.totalXP==100 and s.elapsed==60)
-        assert(MOCK.plain(A.UI.summary:GetText())=='Time 00:01:00  ·  XP +100')
+        assert(A.UI.timeValue:GetText()=='00:01:00' and MOCK.plain(A.UI.nextLevel:GetText())=='200 XP to level 2')
         MOCK.advance(1800);s=A.Stats();assert(s.totalXP==100 and s.elapsed==1860)
         assert(A.UI.hour==nil and A.UI.day==nil and A.UI.averageHour==nil and A.Mobs==nil)
-        assert(A.UI.panel.height==164 and A.db.periods==nil)""")
+        assert(A.UI.panel.height==218 and A.db.periods==nil)""")
 
     def test_session_continues_across_hour_and_day_boundaries_without_resets(self):
         self.check("""MOCK.start();MOCK.gain(75);MOCK.advance(3600);MOCK.gain(25)
         local s=A.Stats();assert(s.totalXP==100 and s.elapsed==3600)
         MOCK.advance(86400);s=A.Stats();assert(s.totalXP==100 and s.elapsed==90000)
-        assert(MOCK.plain(A.UI.summary:GetText())=='Time 1d 01:00:00  ·  XP +100')
+        assert(A.UI.timeValue:GetText()=='1d 01:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='200 XP to level 2')
         MOCK.gain(40);assert(A.Stats().totalXP==140 and A.TickPeriods==nil)""")
 
     def test_existing_session_totals_and_explicit_start_are_preserved(self):
         self.check("""ElmoLevelingDB={xp=12450,seconds=3600,measurementAt=1200,
             periods={hour={xp=20,start=3500}}}
         MOCK.start();local s=A.Stats();assert(s.totalXP==12450 and s.elapsed==2400)
-        assert(A.db.periods==nil and MOCK.plain(A.UI.summary:GetText())=='Time 00:40:00  ·  XP +12,450')
+        assert(A.db.periods==nil and A.UI.timeValue:GetText()=='00:40:00' and MOCK.plain(A.UI.nextLevel:GetText())=='300 XP to level 2')
         A.Command('start');assert(A.Stats().totalXP==0 and A.Stats().elapsed==0)
-        assert(MOCK.plain(A.UI.summary:GetText())=='Time 00:00:00  ·  XP +0')""")
+        assert(A.UI.timeValue:GetText()=='00:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='300 XP to level 2')""")
 
     def test_restart_preserves_current_level_clock_and_completed_history(self):
         self.check("""MOCK.start();MOCK.event('TIME_PLAYED_MSG',5000,1000);MOCK.advance(10)
@@ -674,7 +674,7 @@ class LevelingTests(unittest.TestCase):
             'UPDATE_MOUSEOVER_UNIT','NAME_PLATE_UNIT_ADDED','UNIT_HEALTH','PLAYER_REGEN_DISABLED'})do
             assert(not A.frame.events[event])
         end
-        A.Command('show');assert(MOCK.plain(A.UI.summary:GetText()):find('XP +30',1,true))""")
+        A.Command('show');assert(MOCK.plain(A.UI.nextLevel:GetText())=='270 XP to level 2')""")
 
     def test_retired_samples_do_not_change_the_saved_session(self):
         self.check("""ElmoLevelingDB={xp=37,seconds=20,history={{at=10,xp=500}},kills={{}},respawns={{}},
@@ -694,17 +694,68 @@ class LevelingTests(unittest.TestCase):
         self.check("""MOCK.start();MOCK.advance(60);MOCK.level,MOCK.xp,MOCK.maximum=3,20,1400
         MOCK.event('PLAYER_LEVEL_UP',3);MOCK.event('PLAYER_XP_UPDATE','player')
         assert(A.db.xpGap and A.db.xp==0 and #A.db.levels==2)
-        assert(A.db.levels[1].seconds==nil and MOCK.plain(A.UI.summary:GetText()):find('XP --',1,true))
+        assert(A.db.levels[1].seconds==nil and MOCK.plain(A.UI.nextLevel:GetText())=='1,380 XP to level 4')
         assert(A.UI.levelRows[2].status:GetText()=='Unavailable')
-        A.Reset();assert(not A.db.xpGap and #A.db.levels==2 and MOCK.plain(A.UI.summary:GetText()):find('XP +0',1,true))""")
+        A.Reset();assert(not A.db.xpGap and #A.db.levels==2 and MOCK.plain(A.UI.nextLevel:GetText())=='1,380 XP to level 4')""")
 
     def test_level_history_scrolling_clear_and_xp_restart_are_independent(self):
         self.check("""MOCK.start();for level=2,15 do MOCK.advance(10);A.Levels.Advance(level) end
         A.UI.Update();A.UI.ToggleLevels();A.UI.ScrollLevels(8)
-        assert(A.UI.levelOffset==7 and A.UI.levelRows[1].entry.from==8)
+        assert(A.UI.levelOffset==8 and A.UI.levelRows[1].entry.from==7)
         local seconds=A.Levels.CurrentSeconds();A.Levels.ClearHistory();A.UI.RefreshLevels()
         assert(A.UI.levelOffset==0 and A.Levels.CurrentSeconds()==seconds and #A.db.levels==0)
-        A.UI.ToggleLevels();assert(not A.UI.levelPanel:IsShown() and A.UI.panel.width==332)""")
+        A.UI.ToggleLevels();assert(not A.UI.levelPanel:IsShown() and A.UI.panel.width==368)""")
+
+    def test_sigillo_shows_live_location_level_progress_rest_and_generic_bag_space(self):
+        self.check("""MOCK.level,MOCK.xp,MOCK.maximum,MOCK.rested=39,34178,74300,8916
+        MOCK.zone,MOCK.subzone='Duskwood','Raven Hill';MOCK.slots[1]=8;MOCK.bagFamilies={[1]=32}
+        MOCK.start();assert(A.UI.zone:GetText()=='Duskwood' and A.UI.subzone:GetText()=='Raven Hill')
+        assert(A.UI.level:GetText()=='39' and A.UI.percent:GetText()=='46%')
+        assert(A.UI.ProgressText()=='40,122 XP to level 40' and A.UI.rested:GetText()=='12% rested')
+        assert(A.Bags.state.free==16 and A.UI.freeSlots:GetText()=='16 free slots')
+        assert(A.UI.panel.width==368 and A.UI.panel.height==218 and not A.UI.levelPanel:IsShown())
+        MOCK.zone,MOCK.subzone='Loch Modan','Thelsamar';MOCK.event('ZONE_CHANGED_NEW_AREA')
+        assert(A.UI.zone:GetText()=='Loch Modan' and A.UI.subzone:GetText()=='Thelsamar')
+        MOCK.rested=0;MOCK.event('UPDATE_EXHAUSTION');assert(A.UI.rested:GetText()=='0% rested')""")
+
+    def test_sigillo_unreadable_values_clear_badges_without_exposing_private_values(self):
+        self.check("""MOCK.start();local private=setmetatable({}, {__index=function()error('Private access')end})
+        function issecretvalue(value)return rawequal(value,private)end
+        MOCK.xp,MOCK.maximum=private,private;MOCK.zone,MOCK.subzone=private,private
+        GetXPExhaustion=function()error('Unavailable')end;A.UI.Update()
+        assert(A.UI.percent:GetText()=='--' and A.UI.ProgressText()=='XP unavailable')
+        assert(A.UI.zone:GetText()=='Location unavailable' and A.UI.subzone:GetText()=='')
+        assert(A.UI.rested:GetText()=='Rested --' and A.UI.ringFraction==nil)
+        C_Container.GetContainerNumFreeSlots=function()return private,0 end;A.Bags.Scan();A.UI.Update()
+        assert(not A.Bags.state.freeKnown and A.UI.freeSlots:GetText()=='Bag space --')
+        MOCK.xp,MOCK.maximum,MOCK.zone,MOCK.subzone=200,400,'Elwynn Forest','Goldshire'
+        GetXPExhaustion=function()return nil end;A.UI.Update()
+        assert(A.UI.percent:GetText()=='50%' and A.UI.rested:GetText()=='0% rested')""")
+
+    def test_sigillo_caps_rested_arc_without_losing_the_full_rest_pool(self):
+        self.check("""MOCK.xp,MOCK.maximum,MOCK.rested=300,400,600;MOCK.start()
+        assert(A.UI.percent:GetText()=='75%' and A.UI.rested:GetText()=='150% rested')
+        assert(A.UI.progress.fraction==.75 and A.UI.progress.rested==1.5)
+        MOCK.level,MOCK.maximum=60,0;A.UI.Update()
+        assert(A.UI.percent:GetText()=='MAX' and A.UI.ProgressText()=='Maximum level')
+        assert(A.UI.progress.fraction==1 and A.UI.progress.rested==nil)""")
+
+    def test_sigillo_details_and_commands_preserve_session_and_position(self):
+        self.check("""MOCK.start();MOCK.advance(60);MOCK.gain(25)
+        A.UI.panel.mockLeft,A.UI.panel.mockTop=123,456;A.Command('details')
+        assert(A.UI.levelPanel:IsShown() and A.UI.panel.width==368 and A.UI.panel.height==512)
+        assert(A.UI.panel.point[4]==123 and A.UI.panel.point[5]==-444)
+        assert(A.Stats().elapsed==60 and A.Stats().totalXP==25)
+        A.Command('details');assert(not A.UI.levelPanel:IsShown() and A.UI.panel.height==218)
+        assert(A.Stats().totalXP==25)
+        A.UI.optionsCategory={GetID=function()return 99 end};Settings={OpenToCategory=function(id)MOCK.category=id end}
+        A.Command('options');assert(MOCK.category==99)""")
+
+    def test_sigillo_waits_for_initial_level_and_does_not_round_incomplete_xp_to_100_percent(self):
+        self.check("""MOCK.level=nil;MOCK.start()
+        assert(A.UI.level:GetText()=='?' and A.UI.ProgressText()=='XP unavailable')
+        MOCK.level,MOCK.xp,MOCK.maximum=1,399,400;MOCK.event('PLAYER_XP_UPDATE','player')
+        assert(A.UI.percent:GetText()=='99%' and A.UI.ProgressText()=='1 XP to level 2')""")
 
     def test_full_weighted_score_examples_and_threshold(self):
         self.check("""MOCK.start();local u=A.Upgrades
@@ -714,6 +765,282 @@ class LevelingTests(unittest.TestCase):
         local priest={classID=4,stats={int=10,spirit=5,spell=12,healing=20}}
         assert(math.abs(u.Score(priest,5)-43.6)<0.00001)
         MOCK.talents={0,0,10};u.Invalidate();assert(math.abs(u.Score(priest,5)-24.5)<0.00001)""")
+
+    def test_tnl_is_actual_remaining_xp_and_restart_does_not_reset_it(self):
+        self.check("""MOCK.level,MOCK.maximum,MOCK.xp=42,700000,87550;MOCK.start();MOCK.advance(7298)
+        assert(A.UI.timeValue:GetText()=='02:01:38' and MOCK.plain(A.UI.nextLevel:GetText())=='612,450 XP to level 43')
+        assert(A.UI.timeLabel:GetText()=='Time' and A.UI.tnlValue==nil and A.UI.summary==nil)
+        assert(A.UI.subzone.fontSize==14 and A.UI.nextLevel.parent==A.UI.location)
+        assert(A.UI.nextLevel.fontSize==15 and A.UI.percent.fontSize==13)
+        MOCK.gain(50);assert(MOCK.plain(A.UI.nextLevel:GetText())=='612,400 XP to level 43')
+        A.Reset();assert(A.UI.timeValue:GetText()=='00:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='612,400 XP to level 43')
+        MOCK.xp=MOCK.maximum;A.UI.Update();assert(MOCK.plain(A.UI.nextLevel:GetText())=='0 XP to level 43')
+        MOCK.level,MOCK.maximum,MOCK.xp=43,710000,10
+        MOCK.event('PLAYER_LEVEL_UP',43);MOCK.event('PLAYER_XP_UPDATE','player')
+        assert(MOCK.plain(A.UI.nextLevel:GetText())=='709,990 XP to level 44')""")
+
+    def test_refined_header_clock_fits_without_a_second_xp_row(self):
+        self.check("""MOCK.level,MOCK.maximum,MOCK.xp=42,1000000000,12345
+        MOCK.start();MOCK.advance(123*86400+7298)
+        assert(MOCK.plain(A.UI.nextLevel:GetText())=='999,987,655 XP to level 43' and A.UI.timeValue:GetText()=='123d 02:01:38')
+        assert(A.UI.timeValue:GetStringWidth()<=A.UI.timeValue.width)
+        assert(A.UI.timeValue.width<=130 and A.UI.timeValue.parent==A.UI.clock)
+        assert(A.UI.clock.parent==A.UI.panel and A.UI.summary==nil)
+        MOCK.level,MOCK.maximum=60,0;A.UI.Update()
+        assert(A.UI.nextLevel:GetText()=='Maximum level' and A.UI.percent:GetText()=='MAX')""")
+
+
+    def test_subzone_falls_back_to_minimap_and_never_keeps_a_previous_location(self):
+        self.check("""MOCK.zone,MOCK.subzone,MOCK.minimapZone='Riverglades','',"Elbrim's Farm"
+        MOCK.start();assert(A.UI.subzone:GetText()=="Elbrim's Farm")
+        MOCK.subzone='  Farmstead  ';MOCK.minimapZone='Other location';A.UI.Update()
+        assert(A.UI.subzone:GetText()=='Farmstead')
+        MOCK.subzone,MOCK.minimapZone='Riverglades','Riverglades';MOCK.event('ZONE_CHANGED')
+        assert(A.UI.subzone:GetText()=='')
+        MOCK.subzone=' ';MOCK.minimapZone="  Elbrim's Farm  ";A.UI.Update()
+        assert(A.UI.subzone:GetText()=="Elbrim's Farm")
+        local private={};function issecretvalue(value)return rawequal(value,private)end
+        MOCK.subzone,MOCK.minimapZone=private,private;A.UI.Update()
+        assert(A.UI.subzone:GetText()=='')
+        GetSubZoneText=nil;GetMinimapZoneText=nil;A.UI.Update()
+        assert(A.UI.subzone:GetText()=='')""")
+
+    def test_smooth_ring_tracks_each_quadrant_and_clears_masks_on_rollover(self):
+        self.check("""MOCK.xp,MOCK.maximum,MOCK.rested=250,1000,300;MOCK.start()
+        local earned,rested=A.UI.earnedRing,A.UI.restedRing
+        for _,arc in ipairs({earned,rested})do for _,part in ipairs(arc)do
+            assert(part.texture.snapToPixelGrid==false and part.texture.texelSnappingBias==0)
+            assert(part.mask.snapToPixelGrid==false and part.mask.texelSnappingBias==0)
+        end end
+        assert(earned[1].texture:IsShown() and not earned[1].texture.mask)
+        assert(not earned[2].texture:IsShown() and not earned[4].texture:IsShown())
+        assert(rested[1].texture:IsShown() and rested[2].texture:IsShown())
+        assert(rested[3].texture:IsShown() and rested[3].texture.mask==rested[3].mask)
+        assert(not rested[4].texture:IsShown())
+        MOCK.xp,MOCK.rested=650,0;A.UI.Update()
+        assert(earned[1].texture:IsShown() and earned[2].texture:IsShown())
+        assert(earned[3].texture.mask==earned[3].mask and not earned[4].texture:IsShown())
+        for _,part in ipairs(rested)do assert(not part.texture:IsShown())end
+        -- Check visible angular coverage, including tiny and near-complete arcs.
+        for _,fraction in ipairs({.001,.125,.249,.251,.375,.5,.65,.749,.751,.875,.999})do
+            MOCK.xp=fraction*1000;A.UI.Update()
+            for sample=1,360 do
+                local t=(sample-.5)/360;local q=math.floor(t*4)+1
+                local part=earned[q];local visible=part.texture:IsShown()
+                if visible and part.texture.mask then
+                    local angle=t*math.pi*2;local x,y=-math.cos(angle)*.47,math.sin(angle)*.47
+                    local left=(q==1 or q==4)and -.5 or 0;local top=q<=2 and .5 or 0
+                    local u,v=(x-left)*2,(top-y)*2;local uv=part.mask.texCoord
+                    local alpha=(1-u)*(1-v)*uv[2]+(1-u)*v*uv[4]+u*(1-v)*uv[6]+u*v*uv[8]
+                    visible=alpha>=.5
+                end
+                assert(visible==(t<=fraction),'Wrong arc coverage at '..fraction..' / '..t)
+            end
+        end
+        MOCK.level,MOCK.maximum=60,0;A.UI.Update()
+        for _,part in ipairs(earned)do assert(part.texture:IsShown() and not part.texture.mask)end
+        MOCK.xp,MOCK.maximum=0,400;A.UI.Update()
+        for _,part in ipairs(earned)do assert(not part.texture:IsShown() and not part.texture.mask)end
+        assert(A.UI.nextLevel.fontSize==15 and A.UI.percent.fontSize==13)
+        assert(A.UI.nextLevel:GetStringWidth()<=A.UI.nextLevel.width)""")
+
+
+    def test_native_radial_ring_uses_whole_textures_and_handles_unknown_xp(self):
+        self.check("""MOCK.enableRadialAPI();MOCK.xp,MOCK.maximum,MOCK.rested=780,1000,50;MOCK.start()
+        local earned,rested=A.UI.earnedRing.radial,A.UI.restedRing.radial
+        assert(earned and rested and #A.UI.earnedRing==0 and #A.UI.restedRing==0)
+        assert(math.abs(earned.radialPercent-.78)<.00001 and math.abs(rested.radialPercent-.83)<.00001)
+        assert(earned:IsShown() and rested:IsShown())
+        assert(earned.allPoints==A.UI.signet and not earned.radialReverse)
+        assert(earned.snapToPixelGrid==false and earned.texelSnappingBias==0)
+        local textureCount=0
+        for _,region in ipairs(MOCK.frames)do if region.parent==A.UI.signet then
+            assert(region.kind~='MaskTexture' and region.kind~='Line')
+            if region.kind=='Texture'then textureCount=textureCount+1 end
+        end end
+        assert(textureCount==3,'Native ring must use three whole textures')
+        MOCK.xp,MOCK.rested=990,1500;A.UI.Update()
+        assert(earned.radialPercent==.99 and rested.radialPercent==1)
+        MOCK.level,MOCK.maximum=60,0;A.UI.Update()
+        assert(earned.radialPercent==1 and not rested:IsShown())
+        local private={};function issecretvalue(value)return rawequal(value,private)end
+        MOCK.xp,MOCK.maximum=private,private;A.UI.Update()
+        assert(not earned:IsShown() and not rested:IsShown())
+        MOCK.level,MOCK.xp,MOCK.maximum=60,0,1000;A.UI.Update()
+        assert(earned.radialPercent==0 and not earned:IsShown())""")
+
+    def test_footer_moon_and_backpack_leave_space_and_follow_low_bag_warning(self):
+        self.check("""MOCK.slots[0]=2;MOCK.start()
+        local moon,bag=A.UI.restedIcon,A.UI.freeSlotsIcon
+        assert(moon.texture:match('Moon.tga$') and bag.texture:match('Backpack.tga$'))
+        assert(moon.width==14 and moon.height==14 and bag.width==14 and bag.height==14)
+        assert(moon.snapToPixelGrid==false and bag.texelSnappingBias==0)
+        assert(moon.point[2]+moon.width<A.UI.rested.point[2])
+        assert(bag.point[2]+bag.width<A.UI.freeSlots.point[2])
+        assert(A.UI.freeSlots:GetText()=='2 free slots' and bag.vertexColor[1]==.902)
+        MOCK.slots[0]=16;A.Bags.Scan();A.UI.Update()
+        assert(A.UI.freeSlots:GetText()=='16 free slots' and bag.vertexColor[1]==.694)""")
+
+
+    def test_gold_counters_separate_current_bag_value_and_gross_sales_of_any_quality(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=100000
+        MOCK.item(10,123);MOCK.item(20,10000)
+        MOCK.put(0,1,10,2,{quality=1});MOCK.put(0,2,20,1,{quality=2});MOCK.start()
+        assert(A.Bags.state.value==10246 and A.db.vendorSales==0)
+        assert(A.UI.bagValue.parent==A.UI.bagGold and A.UI.soldValue.parent==A.UI.soldGold)
+        assert(A.UI.panel.height==218 and A.UI.bagValue.fontSize==15)
+        MOCK.event('MERCHANT_SHOW');MOCK.sell(0,1)
+        assert(A.db.vendorSales==246 and A.Bags.state.value==10000)
+        MOCK.sell(0,2);assert(A.db.vendorSales==10246 and A.Bags.state.value==0)
+        assert(MOCK.plain(A.UI.soldValue:GetText())=='1g 2s 46c')
+        assert(MOCK.plain(A.UI.bagValue:GetText())=='0g 0s 0c')""")
+
+    def test_vendor_sales_exclude_looted_coins_quest_rewards_purchases_and_repairs(self):
+        self.check("""MOCK.start();MOCK.money=100000;MOCK.event('PLAYER_MONEY');MOCK.advance(1)
+        assert(A.db.vendorSales==0)
+        MOCK.event('MERCHANT_SHOW');MOCK.money=110000;MOCK.event('PLAYER_MONEY');MOCK.advance(1)
+        assert(A.db.vendorSales==0)
+        MOCK.money=80000;MOCK.event('PLAYER_MONEY');MOCK.advance(1)
+        assert(A.db.vendorSales==0)
+        MOCK.event('MERCHANT_CLOSED');MOCK.money=200000;MOCK.event('PLAYER_MONEY');MOCK.advance(1)
+        assert(A.db.vendorSales==0)""")
+
+    def test_existing_buyback_and_buybacks_removed_from_middle_are_not_new_sales(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        for i=1,3 do MOCK.receipt(100+i,1,100*i)end
+        MOCK.item(20,500);MOCK.put(0,1,20,1);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        assert(A.db.vendorSales==0)
+        table.remove(MOCK.buyback,2);MOCK.money=MOCK.money-200
+        MOCK.event('MERCHANT_UPDATE');MOCK.advance(1);assert(A.db.vendorSales==0)
+        MOCK.sell(0,1);assert(A.db.vendorSales==500)
+        for i=1,5 do MOCK.event('MERCHANT_UPDATE');MOCK.advance(1)end
+        assert(A.db.vendorSales==500)
+        table.remove(MOCK.buyback);MOCK.money=MOCK.money-500
+        MOCK.event('MERCHANT_UPDATE');MOCK.advance(1);assert(A.db.vendorSales==500)""")
+
+    def test_twelve_identical_buyback_rows_do_not_hide_another_identical_sale(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        for i=1,12 do MOCK.receipt(10,2,246)end
+        MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        local a,b=C_Container.UseContainerItem(0,1);assert(a==77 and b=='native')
+        MOCK.saleEffects(0,1);MOCK.event('MERCHANT_UPDATE');MOCK.advance(1)
+        assert(#MOCK.buyback==12 and A.db.vendorSales==246)
+        MOCK.advance(20);assert(A.db.vendorSales==246 and not next(A.Sales.pending))""")
+
+    def test_bulk_junk_sale_exceeding_buyback_capacity_counts_all_stacks(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        for i=1,25 do MOCK.item(100+i,100+i);MOCK.put(0,i,100+i,1,{quality=0})end
+        MOCK.start();MOCK.event('MERCHANT_SHOW');C_MerchantFrame.SellAllJunkItems()
+        local expected=0
+        for i=1,25 do expected=expected+100+i;MOCK.saleEffects(0,i)end
+        -- Repair in the same update: gross sales must not become net wallet change.
+        MOCK.money=MOCK.money-5000;MOCK.event('MERCHANT_UPDATE');MOCK.advance(1)
+        assert(#MOCK.buyback==12 and A.db.vendorSales==expected)
+        assert(A.Bags.state.value==0 and not next(A.Sales.pending))
+        MOCK.advance(20);assert(A.db.vendorSales==expected)""")
+
+    def test_sale_income_stays_gross_when_other_money_changes_in_the_same_update(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        MOCK.item(10,100);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        C_Container.UseContainerItem(0,1);MOCK.saleEffects(0,1);MOCK.money=MOCK.money+9000-15000
+        MOCK.event('MERCHANT_UPDATE');MOCK.advance(1)
+        assert(A.db.vendorSales==200)
+        MOCK.advance(10);assert(A.db.vendorSales==200)""")
+
+    def test_identical_sale_money_and_bag_updates_can_arrive_in_either_order(self):
+        for money_first in (True,False):
+            self.setUp()
+            self.check("""MOCK.merchantAPI();MOCK.money=10000
+            for i=1,12 do MOCK.receipt(10,2,246)end
+            MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+            C_Container.UseContainerItem(0,1)""")
+            if money_first:
+                self.check("""MOCK.money=MOCK.money+246;MOCK.event('PLAYER_MONEY');MOCK.advance(1)
+                assert(A.db.vendorSales==0)
+                MOCK.bags[0][1]=nil;MOCK.event('BAG_UPDATE_DELAYED');MOCK.advance(1)""")
+            else:
+                self.check("""MOCK.bags[0][1]=nil;MOCK.event('BAG_UPDATE_DELAYED');MOCK.advance(1)
+                assert(A.db.vendorSales==0)
+                MOCK.money=MOCK.money+246;MOCK.event('PLAYER_MONEY');MOCK.advance(1)""")
+            self.check("assert(A.db.vendorSales==246 and not next(A.Sales.pending))")
+
+    def test_receipt_before_bag_and_money_updates_does_not_double_count(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        C_Container.UseContainerItem(0,1);MOCK.receipt(10,2,246)
+        MOCK.event('MERCHANT_UPDATE');MOCK.advance(1);assert(A.db.vendorSales==246)
+        MOCK.bags[0][1]=nil;MOCK.money=MOCK.money+246
+        MOCK.event('PLAYER_MONEY');MOCK.event('BAG_UPDATE_DELAYED');MOCK.advance(1)
+        assert(A.db.vendorSales==246 and not A.db.vendorSalesPartial)""")
+
+    def test_sale_response_after_merchant_closes_is_reconciled_from_observed_request(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        C_Container.UseContainerItem(0,1);MOCK.event('MERCHANT_CLOSED')
+        MOCK.bags[0][1]=nil;MOCK.money=MOCK.money+246
+        MOCK.event('PLAYER_MONEY');MOCK.event('BAG_UPDATE_DELAYED');MOCK.advance(1)
+        assert(A.db.vendorSales==246 and not next(A.Sales.pending))""")
+
+    def test_rejected_sales_and_unrelated_inventory_moves_do_not_count(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        for i=1,12 do MOCK.receipt(10,2,246)end
+        MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        C_Container.UseContainerItem(0,1);MOCK.advance(11)
+        assert(A.db.vendorSales==0 and not next(A.Sales.pending))
+        -- An item leaves the bag and unrelated loot coins arrive, with no sale request.
+        MOCK.bags[0][1]=nil;MOCK.money=MOCK.money+246
+        MOCK.event('PLAYER_MONEY');MOCK.event('BAG_UPDATE_DELAYED');MOCK.advance(1)
+        assert(A.db.vendorSales==0)""")
+
+    def test_cursor_sale_and_repeated_hook_installation_count_once(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        for i=1,12 do MOCK.receipt(10,2,246)end
+        MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        A.Sales.Hook();A.Sales.Hook()
+        C_Container.PickupContainerItem(0,1);SellCursorItem();MOCK.saleEffects(0,1)
+        MOCK.event('MERCHANT_UPDATE');MOCK.advance(1)
+        assert(A.db.vendorSales==246)
+        MOCK.advance(20);assert(A.db.vendorSales==246)""")
+
+    def test_sales_counter_persists_and_restart_preserves_level_history(self):
+        self.check("""ElmoLevelingDB={vendorSales=12345};MOCK.start();MOCK.advance(60);MOCK.gain(50)
+        assert(A.db.vendorSales==12345)
+        MOCK.event('PLAYER_LOGOUT');assert(ElmoLevelingDB.vendorSales==12345)
+        MOCK.event('PLAYER_ENTERING_WORLD',false,true);assert(A.db.vendorSales==12345)
+        local state=A.db.levelState;A.Reset()
+        assert(A.db.vendorSales==0 and A.Stats().elapsed==0 and A.db.levelState==state)
+        assert(MOCK.plain(A.UI.soldValue:GetText())=='0g 0s 0c')""")
+
+    def test_unreadable_receipts_are_not_invented_and_missing_prices_remain_lower_bounds(self):
+        self.check("""MOCK.item(10,123,{cold=true});MOCK.put(0,1,10,2);MOCK.start()
+        assert(A.UI.bagValue:GetText():match('^>= '))
+        local private={};function issecretvalue(value)return rawequal(value,private)end
+        GetBuybackItemInfo=function()return 'Hidden',123,private,2 end
+        MOCK.receipt(10,2,246);MOCK.event('MERCHANT_SHOW');MOCK.advance(1)
+        assert(A.db.vendorSales==0 and A.db.vendorSalesPartial)
+        assert(A.UI.soldValue:GetText():match('^>= '))""")
+
+
+    def test_large_gold_counters_fit_columns_and_pending_requests_expire_if_api_disappears(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        MOCK.item(10,12345678999);MOCK.put(0,1,10,1)
+        ElmoLevelingDB={vendorSales=12345678999};MOCK.start()
+        assert(A.UI.bagValue:GetStringWidth()<=A.UI.bagValue.width)
+        assert(A.UI.soldValue:GetStringWidth()<=A.UI.soldValue.width)
+        MOCK.event('MERCHANT_SHOW');C_Container.UseContainerItem(0,1)
+        GetNumBuybackItems=nil;MOCK.advance(1);MOCK.event('MERCHANT_CLOSED')
+        MOCK.advance(11);assert(not next(A.Sales.pending))
+        assert(A.db.vendorSalesPartial and A.db.vendorSales==12345678999)""")
+
+
+    def test_request_plus_money_and_inventory_changes_without_receipt_is_not_a_sale(self):
+        self.check("""MOCK.merchantAPI();MOCK.money=10000
+        MOCK.item(10,123);MOCK.put(0,1,10,2);MOCK.start();MOCK.event('MERCHANT_SHOW')
+        C_Container.UseContainerItem(0,1)
+        MOCK.bags[0][1]=nil;MOCK.money=MOCK.money+246
+        MOCK.event('PLAYER_MONEY');MOCK.event('BAG_UPDATE_DELAYED');MOCK.advance(1)
+        assert(A.db.vendorSales==0)
+        MOCK.advance(11);assert(A.db.vendorSales==0 and A.db.vendorSalesPartial)""")
 
 
 if __name__ == "__main__":

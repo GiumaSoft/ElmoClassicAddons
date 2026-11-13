@@ -5,6 +5,12 @@ Mana/cast API review on 2026-11-12, Forever snapshot
 https://github.com/Gethe/wow-ui-source/blob/4cd0ab752a77164f654ccbca9d0c1fe8dafceebe/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua
 https://github.com/Gethe/wow-ui-source/blob/4cd0ab752a77164f654ccbca9d0c1fe8dafceebe/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleStatusBarAPIDocumentation.lua
 
+The 2.4.1 mana filter also checks public UnitClass classFilename and UnitIsPlayer
+against the current [native Unit API](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/UnitDocumentation.lua).
+Only NPCs classified as MAGE, PRIEST, WARLOCK, PALADIN, SHAMAN or DRUID qualify.
+No spell observation or external NPC database is required. Unknown/private
+classes are omitted rather than inferred from private power values.
+
 UnitBars.lua checks the public UnitPowerType and forwards UnitPower/UnitPowerMax
 directly to owned status bars. Public zero maximum hides mana; private maxima
 are never compared. UnitCastingInfo/UnitChannelInfo supply the spell name/icon

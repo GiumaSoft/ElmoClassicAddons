@@ -343,14 +343,35 @@ class RecruitmentTests(unittest.TestCase):
         assert(#MOCK.invited==1 and A.status:find('already pending',1,true))
         """)
 
-    def test_left_click_and_checkbox_still_select_without_inviting(self):
+    def test_left_click_opens_native_whisper_and_checkbox_selects_for_batch(self):
+        self.check("""
+        A.UI.Open();MOCK.search({MOCK.player('Alice-OtherRealm')})
+        local row=MOCK.row('Alice-OtherRealm');local key=row.player.key
+        A.UI.frame.message:SetText('Batch draft');A.UI.frame.message:SetFocus()
+        MOCK.click(row)
+        assert(MOCK.whisperTarget=='Alice-OtherRealm' and not A.UI.frame.message:HasFocus())
+        assert(not A.selected[key] and not row.check:GetChecked())
+        assert(A.UI.frame.message:GetText()=='Batch draft')
+        assert(next(A.contacts)==nil and next(A.tickets)==nil and not row.sent:IsShown())
+        MOCK.click(row.check);assert(A.selected[key] and row.check:GetChecked())
+        MOCK.click(row);assert(A.selected[key] and row.check:GetChecked())
+        MOCK.click(row.check);assert(not A.selected[key] and not row.check:GetChecked())
+        assert(#MOCK.invited==0 and #MOCK.sent==0)
+        """)
+
+    def test_left_click_can_reply_to_a_contact_without_changing_recruitment_state(self):
         self.check("""
         A.UI.Open();MOCK.search({MOCK.player('Alice')})
-        local row=MOCK.row('Alice');local key=row.player.key
-        MOCK.click(row);assert(A.selected[key] and row.check:GetChecked())
-        MOCK.click(row);assert(not A.selected[key] and not row.check:GetChecked())
-        MOCK.click(row.check);assert(A.selected[key] and row.check:GetChecked())
-        assert(#MOCK.invited==0 and #MOCK.sent==0)
+        A.selected[A.NameKey('Alice')]=true;assert(A.SendSelected())
+        A.HandleWhisper('Ready as healer','Alice')
+        local row=MOCK.row('Alice');local contact=A.contacts[row.player.key]
+        local ticket=A.tickets[row.player.key]
+        assert(not row.check:IsEnabled())
+        MOCK.click(row)
+        assert(MOCK.whisperTarget=='Alice' and #MOCK.sent==1 and #MOCK.invited==0)
+        assert(A.contacts[row.player.key]==contact and A.tickets[row.player.key]==ticket)
+        assert(contact.sent and contact.reply=='Ready as healer' and row.sent:IsShown())
+        assert(row.reply:GetText()=='Ready as healer' and not A.selected[row.player.key])
         """)
 
     def test_right_click_rejects_self_group_members_full_groups_and_missing_permission(self):
