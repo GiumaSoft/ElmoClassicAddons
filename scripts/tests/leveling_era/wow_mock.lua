@@ -303,3 +303,5 @@ function MOCK.headerClick(x, y, button, down)
     end
     return receiver
 end
+
+function RequestTimePlayed() MOCK.playedRequests = (MOCK.playedRequests or 0) + 1 end

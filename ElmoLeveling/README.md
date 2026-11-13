@@ -1,135 +1,112 @@
-# ElmoLeveling 1.6.7
+# ElmoLeveling 2.0.0
 
-## Options menu
+Actual XP earned over one hour and 24 hours, time per level, and purple equipment
+upgrade borders for **Classic Era 1.15.9** and **WoW Forever 1.60.1**.
+The English dashboard keeps the dark and bronze Elmo style.
 
-Open **Options > AddOns > ElmoLeveling** for visibility, position locking, kill-history expansion, centering, session reset and history clearing. Existing slash commands and tracker controls remain available.
+## Actual XP periods
 
-An English leveling dashboard for **WoW Classic Era 1.15.9 (11509)** and **WoW Forever 1.60.1 (16001)**. Both packages use the same source files; the build generates only the client selector and manifest. API capability checks handle talents, tooltips, spells and protected combat data.
+The first measurement starts when the addon first runs. **Restart**, `/elvl start`
+or `/elvl reset` begins both periods again from zero. They are fixed one-hour
+and 24-hour periods from that start, using online time. All idle, travel, city,
+AFK and out-of-combat time counts; offline time does not. Reloading, logging out
+or changing zones does not reset a measurement.
 
-## Dashboard
+Each period adds only XP actually awarded to the player's XP bar, including
+kills, quests, exploration and rested bonuses. There is no average, median,
+per-minute conversion or extrapolation to a full hour/day.
 
-- **XP/min (60s):** actual XP gained in the last 60 online seconds. Recent and
-  Average XP/min displays refresh every 5 seconds; awards are recorded immediately.
-- **XP/hr (60m):** actual XP gained in the last 3600 online seconds.
-- **Average:** session XP divided by online elapsed time, converted to minute/hour.
-- Session XP, current character name and level.
-- **Combat / Total:** time in combat and all online time, in hours, minutes and seconds.
-- **Bags (sell value):** native vendor price times item count in the backpack and four carried bags.
-- A movable and lockable 332 x 195 pixel panel, expanding to 408 x 400.
+```text
+periodXP = sum(actual player XP awards recorded within that online period)
+periodElapsed = online seconds since that period started
+```
 
-Recent XP/min and XP/hr reset to zero at each new login. Their current windows
-survive `/reload` and zone transitions. Session totals, averages, timers and
-saved mob history are preserved.
+Before the first hour or day completes, its large number shows actual XP earned
+so far and is labelled **first 1h** / **first 24h**, **In progress**. When a period
+completes, the large number retains its actual completed total, labelled
+**last full 1h** / **last full 24h**. The line below shows the next period's actual
+XP and elapsed time. Periods continue through idle time; an entirely idle
+completed period correctly records zero XP. An award exactly at a boundary
+belongs to the new period. Only the most recent completed total is retained.
 
-Idle online time counts; offline time does not. Settings and counters are saved
-per character. Both Combat and Total reset with Reset, including when already in
-combat. Combat uses public player combat-state events and works independently
-of Forever's restricted combat log. Existing Total time is preserved on upgrade;
-Combat begins at zero because old combat time was not recorded. Missing item prices show a partial value and wait for loading
-before reporting a complete value. Equipped items, bank contents, auction
-prices and wallet gold are excluded from bag value.
+Existing pre-2.0 session totals are not invented as new hour/day measurements.
+If several levels are skipped between readable XP snapshots, the intervening
+XP requirements cannot be reconstructed safely: the totals show **--** and
+request a fresh start rather than publish an estimated award.
 
-## Mob history and Forever limitations
+## Time per level
 
-Click **Kills/min [+]** to expand the **100 most recent recorded kills**.
-Columns are **Mob | Lvl | XP@lvl | Time | XP/s | Respawn avg**. For example, `75@7` means
-75 XP received while your character was level 7. Scroll with the mouse wheel
-or Up/Down. **Clear** removes the history without resetting XP or bag counters.
+Click **Levels [+]** to expand the current level and up to 100 recorded completed
+level transitions. Times use **days, hours, minutes and seconds**, for example
+`1d 03h 12m 09s`. Scroll with the mouse wheel or Up/Down.
 
-Forever restricts combat-log access and does not expose Classic's event reader.
-The addon therefore records readable **mob XP chat messages**. Kills/min counts
-those records over the last 60 online seconds. Zero-XP kills cannot be counted
-through this source. A mob level is used only when public unit data can identify
-it; unavailable or secret levels/identities stay **?**.
+- **In progress:** the current level's known online time, including idle time.
+- **Complete:** the full observed online time from one level to the next.
+- **Partial:** tracking began during that level and its earlier time is unknown.
+- **Unavailable:** several unobserved levels cannot be timed separately.
 
-On Forever, **Time** and **XP/s** use an observed per-creature estimate, marked
-with **~**. Timing starts when public unit data shows that the mob is fighting
-you, your pet or a party member, and stops at its observed death. If the unit
-disappears but its GUID is present in the XP notice, that notice closes the timer.
-Looking at a mob does not start timing; changing targets does not reset it.
-Evading and pulling again starts a new timer. Without an identifiable start or
-an unambiguous XP-to-mob match, both fields remain **--**. New fights after
-`/reload` can be measured; historical unknown times cannot be recovered.
+The addon requests Blizzard's native played-time data once when entering the
+world after login/reload. A readable reply supplies the current level's full
+online time, including time played before installation. No chat handler is
+replaced. If the API is unavailable or restricted, local timing continues and
+its first interval is marked Partial. Past completed level times cannot be
+recovered from the current played-time reply.
 
-Classic Era retains first-hit/miss-to-death combat-log timing. Protected values
-are not decoded or reconstructed on either client.
+Level timing and history persist across reload/login, exclude offline time,
+and remain independent of **Restart**. **Options > AddOns > ElmoLeveling >
+Clear completed level history** clears completed rows without restarting the
+current level or XP measurements. At the level cap, the current row shows
+**Max level**; recorded prior transitions remain available.
 
 ## Equipment upgrades
 
-A **purple border** marks currently usable estimated upgrades in native Forever
-bags, including combined bags, and in the installed BetterBags Camelot edition.
-Borders are mouse-transparent and do not alter item clicks or quality textures.
-The meter can be hidden while borders continue to update.
-Level and equipped item links are checked once a second, so delayed client
-updates also invalidate the comparison and refresh existing borders.
+The **purple border** remains active in native bags (including combined bags)
+and the installed BetterBags edition, even when the dashboard is hidden.
+It compares currently usable items against equipped replacements using relative
+class/role leveling weights. Gear is never equipped automatically.
 
-The comparison uses relative class/role leveling weights and relevant weapon
-DPS. Native group roles take precedence; otherwise current C_Traits ranks select
-the dominant branch. Spell-to-branch facts are bundled; Talents Forever is not
-required. Unknown changed spells are ignored instead of inheriting old node
-ranks. Untalented characters use their class's solo leveling profile.
+The complete, unchanged rules are in [Equipment upgrade formulas](UPGRADE_RULES.md):
 
-Rings/trinkets compare both slots and respect unique/category limits. A two-hand
-replacement includes the lost offhand, and offhand weapons require trained Dual
-Wield. Hunter melee and Feral weapons are scored as stat sticks. Missing equipped
-item data waits for loading instead of becoming a zero-score baseline.
+- The exact weighted score and strict improvement threshold.
+- Class, specialization, no-talent defaults and group-role precedence.
+- Every primary, secondary, spell, healing, armor and weapon-DPS weight.
+- Rings/trinkets, two-hand/off-hand costs, Dual Wield and unique limits.
+- Data-loading behavior, examples and what the model does not evaluate.
 
-These are **leveling estimates**, retaining ClassicLeveling's relative weights,
-not a simulation of Forever's class balance or a BiS ranking. Procs, on-use/set
-bonuses, school-specific spell bonuses, resistances, stat caps, weapon speed and
-ability rotations are not modeled. Supplemental flat tooltip bonuses support
-English; native stats are read through C_Item. Gear is never equipped and talents
-are never changed automatically.
+These are estimates, not damage/healing simulations or best-in-slot rankings.
+The same full formulas are included in the CurseForge project description and
+the release commit message.
 
-## Commands
+**Bags (sell value)** continues to show vendor price times quantity in the
+backpack and four carried bags. Missing prices stay pending until loaded.
+Equipment, bank contents, auction prices and wallet gold are excluded.
 
-- `/elvl` or `/elmoleveling`: show/hide the dashboard.
-- `/elvl show` / `/elvl hide`: set visibility.
-- `/elvl lock` / `/elvl unlock`: control dragging.
-- `/elvl center`: restore the default position.
-- `/elvl reset`: reset XP, history, kill frequency and both session timers.
-- `/elvl help`: show command help.
+## Controls and installation
 
+Open `/elvl` or `/elmoleveling` to show/hide the dashboard. `/elvl show`, `hide`,
+`lock`, `unlock` and `center` remain available. `/elvl start` and `reset` restart
+the XP periods. Visibility, dragging lock, level-history expansion, centering,
+restart and history clearing are accessible from **Options > AddOns > ElmoLeveling**.
 
-## Install and existing profiles
+Use the package labelled **classic** for Classic Era and **forever** for Forever.
+Extract its ElmoLeveling folder into the client's `Interface/AddOns` directory.
+After replacing an existing installation, `/reload` loads the new version.
 
-Use the package labelled **classic** for Classic Era and **forever** for Forever. Place the ElmoLeveling folder in the corresponding client's Interface/AddOns directory and restart the client.
+Both client packages share the same source. Preferences and current tracking
+are saved per character in **ElmoLevelingDB**. Existing visibility, position,
+locking and bag baseline are preserved. Retired mob/respawn samples are removed
+from this addon's saved data when it loads; other addons' data is untouched.
 
-The tracker uses **ElmoLevelingDB** per character. The public archive
-contains only the ElmoLeveling addon folder.
+## Native API references and validation
 
-Existing ElmoLeveling profiles are preserved. Former-addon importers are no longer included or loaded. The installer does not modify SavedVariables files.
+XP uses public UnitXP, UnitXPMax, UnitLevel, PLAYER_XP_UPDATE and PLAYER_LEVEL_UP.
+Level timing observes [TIME_PLAYED_MSG](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/SystemDocumentation.lua)
+and requests the same [RequestTimePlayed API used by /played](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_ChatFrameBase/Shared/SlashCommands.lua).
+No combat-log, mob-XP chat, target, mouseover or nameplate observation is used.
 
-## Validation
+Automated Lua 5.1 checks execute the actual addon with explicit native-API
+fixtures. They cover period boundaries, idle time, reload/logout, XP rollover,
+level timing, current profiles, item comparisons and both client variants.
+Live server permissions and rendering still require an in-game check.
 
-Automated checks execute the actual Lua files using Lua 5.1 and mocked APIs. They cover XP, bags, history, timing, equipment upgrades, current-profile preservation and both client API variants. Live-client behavior and appearance still require an in-game check.
-
-The release packager
-refuses a mismatch between both TOCs and the displayed addon version.
-# ElmoLeveling
-
-
-## Observed respawn average
-
-**Respawn avg** is the mean time from a recorded kill to a newly observed living
-mob with the **same name**. Mob level and individual identity do not group the
-result: Boar at level 4 and Boar at level 8 contribute to the same average.
-Each newly observed mob completes one waiting kill, oldest first. Repeated
-sightings and mobs already observed alive before the kill add no samples.
-
-The column refreshes every **5 seconds**. It shows **--** until the first sample,
-then an estimate such as **135s** (seconds). Hover the row to
-see the sample count. The current average is shared by all rows with that name;
-**Time** remains the duration of that individual kill.
-
-Observations come from targets, mouseover, visible nameplates and party targets.
-This measures observed availability, so a mob outside observable units can be
-seen later than its actual spawn. No server respawn schedule is assumed.
-
-Averages are saved per character, for at most 100 names. Area changes and
-reload/login discard unfinished waits, preserving measured averages. **Clear**
-removes the mob list while averages continue; **Reset** also clears averages.
-
-Respawn sampling uses public XP kill notices and readable living units. Protected
-unit identities are skipped. It works independently of exact kill-time data,
-which can remain unavailable in Forever.
+Source: https://github.com/GiumaSoft/ElmoClassicAddons

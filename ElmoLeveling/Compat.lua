@@ -17,17 +17,7 @@ function A.Call(fn, ...)
     if ok then return a, b, c, d, e, f, g, h, i, j end
 end
 
-function C.CombatAvailable()
-    local _, _, _, interface = A.Call(GetBuildInfo)
-    if A.IsNumber(interface) and interface >= 16000 and interface < 17000 then return false end
-    local get = C_CombatLog and C_CombatLog.GetCurrentEventInfo or CombatLogGetCurrentEventInfo
-    if type(get) ~= "function" then return false end
-    local restricted = A.Call(C_CombatLog and C_CombatLog.IsCombatLogRestricted)
-    return not A.IsSecret(restricted) and restricted ~= true
-end
-
 function C.Register(frame, event)
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" and not C.CombatAvailable() then return false end
     local valid = A.Call(C_EventUtils and C_EventUtils.IsEventValid, event)
     if valid == false then return false end
     return pcall(frame.RegisterEvent, frame, event)

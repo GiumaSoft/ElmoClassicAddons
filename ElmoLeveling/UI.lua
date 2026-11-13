@@ -3,396 +3,228 @@ local U = {}
 A.UI = U
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
-local WIDTH = 332
-local INNER = WIDTH - 20
-local MOB_WIDTH = 408
-local MOB_INNER = MOB_WIDTH - 20
+local WIDTH, EXPANDED_WIDTH, HEIGHT = 332, 408, 250
 
 local function label(parent, size, text)
     local f = parent:CreateFontString(nil, "OVERLAY")
-    f:SetFont(FONT, size, "")
-    f:SetTextColor(.93, .91, .84)
-    f:SetJustifyH("LEFT")
-    f:SetText(text or "")
+    f:SetFont(FONT, size, ""); f:SetTextColor(.93, .91, .84)
+    f:SetJustifyH("LEFT"); f:SetText(text or "")
     return f
 end
-
 local function panel(kind, name, parent)
     local f = CreateFrame(kind, name, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
     f:SetBackdrop({bgFile = WHITE, edgeFile = WHITE, edgeSize = 1})
-    f:SetBackdropColor(.025, .025, .025, .94)
-    f:SetBackdropBorderColor(.68, .52, .18, 1)
+    f:SetBackdropColor(.025, .025, .025, .94); f:SetBackdropBorderColor(.68, .52, .18, 1)
     return f
 end
-
-local function button(parent, text, x, callback)
+local function button(parent, text, x, y, width, callback)
     local b = panel("Button", nil, parent)
-    b:EnableMouse(true)
-    b:RegisterForClicks("LeftButtonUp")
-    b:SetSize(69, 23)
-    b:SetPoint("TOPRIGHT", x, -162)
-    b.label = label(b, 11, text)
-    b.label:SetPoint("CENTER")
+    b:EnableMouse(true); b:RegisterForClicks("LeftButtonUp")
+    b:SetSize(width, 23); b:SetPoint("TOPRIGHT", x, y)
+    b.label = label(b, 11, text); b.label:SetPoint("CENTER")
     local highlight = b:CreateTexture(nil, "HIGHLIGHT")
-    highlight:SetAllPoints()
-    highlight:SetColorTexture(1, .82, 0, .12)
+    highlight:SetAllPoints(); highlight:SetColorTexture(1, .82, 0, .12)
     b:SetScript("OnClick", callback)
     return b
 end
-
 function U.Number(value)
-    local text = string.format("%.0f", math.max(0, value))
-    local result = text:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
-    return result
+    local text = string.format("%.0f", math.max(0, value)):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+    return text
 end
-
-function U.Time(seconds)
-    seconds = math.floor(seconds)
-    return string.format("%02d:%02d:%02d", math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60)
-end
-
 function U.SessionTime(seconds)
-    seconds = math.floor(seconds)
-    return string.format("%dh %dm %ds", math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60)
+    seconds = math.floor(math.max(0, seconds))
+    return string.format("%dd %02dh %02dm %02ds", math.floor(seconds / 86400),
+        math.floor(seconds / 3600) % 24, math.floor(seconds / 60) % 60, seconds % 60)
 end
-
-function U.KillTime(seconds, estimated)
-    return A.IsNumber(seconds) and ((estimated and "~" or "") .. string.format("%.1fs", seconds)) or "--"
-end
-
-function U.RespawnTime(seconds)
-    return A.IsNumber(seconds) and (U.Number(math.floor(seconds + .5)) .. "s") or "--"
-end
-
-function U.XPPerSecond(xp, seconds, estimated)
-    if not A.IsNumber(xp) or not A.IsNumber(seconds) or seconds <= 0 then return "--" end
-    local rate = xp / seconds
-    return A.IsNumber(rate) and ((estimated and "~" or "") .. string.format("%.1f", rate)) or "--"
-end
-
 function U.Money(copper, signed)
     local prefix = signed and (copper > 0 and "+" or copper < 0 and "-" or "") or ""
     copper = math.floor(math.abs(copper))
     return prefix .. "|cffffd100" .. U.Number(math.floor(copper / 10000)) .. "g|r " ..
-        "|cffc7c7cf" .. math.floor(copper / 100) % 100 .. "s|r " ..
-        "|cffeda55f" .. copper % 100 .. "c|r"
+        "|cffc7c7cf" .. math.floor(copper / 100) % 100 .. "s|r " .. "|cffeda55f" .. copper % 100 .. "c|r"
 end
-
 function U.Place()
-    local f = U.panel
-    f:ClearAllPoints()
-    if A.db.position then
-        f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", A.db.position.x, A.db.position.y)
+    local f = U.panel; f:ClearAllPoints()
+    if A.db.position then f:SetPoint("TOPLEFT", UIParent, "TOPLEFT", A.db.position.x, A.db.position.y)
     else f:SetPoint("CENTER", UIParent, "CENTER", 0, -130) end
 end
-
-function U.ScrollMobs(delta)
-    local maximum = math.max(0, #A.db.kills - 8)
-    U.mobOffset = math.max(0, math.min(maximum, (U.mobOffset or 0) + delta))
-    U.mobRevision = nil
-    U.RefreshMobs()
+function U.ScrollLevels(delta)
+    U.levelOffset = math.max(0, math.min(math.max(0, #A.db.levels + 1 - 8), (U.levelOffset or 0) + delta))
+    U.RefreshLevels()
 end
-
-function U.ToggleMobs()
-    A.db.mobExpanded = not A.db.mobExpanded
-    U.RefreshMobs()
-end
+function U.ToggleLevels() A.db.levelExpanded = not A.db.levelExpanded; U.RefreshLevels() end
 
 function U.RegisterOptions()
     if U.optionsCategory or not (Settings and Settings.RegisterCanvasLayoutCategory) then return end
     local p = CreateFrame("Frame", nil, UIParent)
     U.optionsPanel = p; p:Hide()
-    local title = label(p, 16, "ElmoLeveling"); title:SetPoint("TOPLEFT", 16, -16)
-    local description = label(p, 12, "XP, bag value, equipment upgrades and kill history.")
-    description:SetPoint("TOPLEFT", 16, -48)
+    label(p, 16, "ElmoLeveling"):SetPoint("TOPLEFT", 16, -16)
+    label(p, 12, "Actual 1-hour / 24-hour XP, time per level and equipment upgrades."):SetPoint("TOPLEFT", 16, -48)
     local function check(value, y, change)
         local c = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
         c:SetPoint("TOPLEFT", 16, y); c:SetSize(26, 26)
-        local caption = label(c, 12, value); caption:SetPoint("LEFT", c, "RIGHT", 4, 0)
+        label(c, 12, value):SetPoint("LEFT", c, "RIGHT", 4, 0)
         c:SetScript("OnClick", function(self) change(self:GetChecked() == true) end)
         return c
     end
     p.visible = check("Show tracker", -80, A.SetVisible)
     p.locked = check("Lock tracker position", -114, A.SetLocked)
-    p.expanded = check("Show kill history", -148, function(value)
-        A.db.mobExpanded = value; U.RefreshMobs()
-    end)
+    p.expanded = check("Show time per level", -148, function(value) A.db.levelExpanded = value; U.RefreshLevels() end)
     local function action(value, y, fn)
         local b = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
-        b:SetPoint("TOPLEFT", 16, y); b:SetSize(240, 26); b:SetText(value)
-        b:SetScript("OnClick", fn); return b
+        b:SetPoint("TOPLEFT", 16, y); b:SetSize(240, 26); b:SetText(value); b:SetScript("OnClick", fn)
+        return b
     end
-    p.center = action("Center and show tracker", -196, function()
-        A.Command("center"); p.visible:SetChecked(true)
-    end)
-    p.reset = action("Reset XP and session", -234, A.Reset)
-    p.clear = action("Clear kill history", -272, function()
-        A.Mobs.ClearHistory(); U.mobOffset = 0; U.RefreshMobs()
-    end)
+    p.center = action("Center and show tracker", -196, function() A.Command("center"); p.visible:SetChecked(true) end)
+    p.reset = action("Restart XP periods", -234, A.Reset)
+    p.clear = action("Clear completed level history", -272, function() A.Levels.ClearHistory(); U.levelOffset = 0; U.RefreshLevels() end)
+    label(p, 12, "All online time counts, including idle and out-of-combat time."):SetPoint("TOPLEFT", 16, -324)
+    label(p, 12, "Restarting XP periods preserves time per level and completed levels."):SetPoint("TOPLEFT", 16, -348)
     p:SetScript("OnShow", function()
         p.visible:SetChecked(not A.db.hidden); p.locked:SetChecked(A.db.locked)
-        p.expanded:SetChecked(A.db.mobExpanded == true)
+        p.expanded:SetChecked(A.db.levelExpanded)
     end)
     U.optionsCategory = Settings.RegisterCanvasLayoutCategory(p, "ElmoLeveling")
     Settings.RegisterAddOnCategory(U.optionsCategory)
 end
 
-function U.CreateMobs()
-    U.mobOffset, U.mobRows = 0, {}
-    U.mobToggle = button(U.panel, "Kills/min: 0 [+]", -10, U.ToggleMobs)
-    U.mobToggle:SetSize(110, 20)
-    U.mobToggle:SetFrameLevel(U.anchor:GetFrameLevel() + 1)
-    U.mobToggle:ClearAllPoints(); U.mobToggle:SetPoint("TOPLEFT", WIDTH - 119, -2)
-    U.mobToggle.label:SetFont(FONT, 10, "")
-    U.mobToggle:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("Mob kills")
-        GameTooltip:AddLine(A.Compat.CombatAvailable() and "Kills/min counts kills in the last 60 seconds of online time." or
-            "Kills/min counts readable mob XP messages in the last 60 seconds. Zero-XP kills are unavailable without combat-log access.", 1, 1, 1, true)
-        GameTooltip:AddLine("Click to expand or collapse the last " .. A.Mobs.LIMIT .. " kills.", .8, .8, .8, true)
-        GameTooltip:AddLine("XP@lvl: 75@7 means 75 XP received at character level 7.", .8, .8, .8, true)
-        GameTooltip:AddLine(A.Compat.CombatAvailable() and "Time: first recorded hit or miss to the mob's death, including pet and group attacks." or
-            "Forever restricts the combat log. ~ marks time from observed group engagement to death or XP; unknown timing stays --.", .8, .8, .8, true)
-        GameTooltip:AddLine("XP/s: XP received divided by that mob's kill time.", .8, .8, .8, true)
-        GameTooltip:AddLine("Respawn avg: mean wait from a kill to a newly observed living mob with the same name, at any level.", .8, .8, .8, true)
-        GameTooltip:AddLine("Respawn averages refresh every 5 seconds; they are observed estimates.", .8, .8, .8, true)
+function U.CreateLevels()
+    U.levelOffset, U.levelRows = 0, {}
+    U.levelToggle = button(U.panel, "Levels [+]", -10, -3, 100, U.ToggleLevels)
+    U.levelToggle:SetFrameLevel(U.anchor:GetFrameLevel() + 1)
+    U.levelToggle:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText("Time per level")
+        GameTooltip:AddLine("Online time spent advancing from one level to the next, including idle time.", 1, 1, 1, true)
+        GameTooltip:AddLine("Click to expand. Times use days, hours, minutes and seconds.", .8, .8, .8, true)
+        GameTooltip:AddLine("Partial means time before first observation was unavailable. Past levels cannot be reconstructed.", .8, .8, .8, true)
         GameTooltip:Show()
     end)
-    U.mobToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
+    U.levelToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
     local p = CreateFrame("Frame", nil, U.panel)
-    U.mobPanel = p
-    p:SetSize(MOB_WIDTH, 198); p:SetPoint("TOPLEFT", 0, -200)
+    U.levelPanel = p; p:SetSize(EXPANDED_WIDTH, 204); p:SetPoint("TOPLEFT", 0, -255)
     local divider = p:CreateTexture(nil, "ARTWORK")
-    divider:SetColorTexture(.68, .52, .18, .35)
-    divider:SetPoint("TOPLEFT", 10, 0); divider:SetSize(MOB_INNER, 1)
-    local mob = label(p, 10, "Mob"); mob:SetPoint("TOPLEFT", 10, -10)
-    for _, column in ipairs({{"Lvl", -240, 26}, {"XP@lvl", -178, 54}, {"Time", -134, 36},
-        {"XP/s", -86, 40}, {"Respawn avg", -10, 68}}) do
-        local t = label(p, 9, column[1]); t:SetPoint("TOPRIGHT", column[2], -10)
-        t:SetWidth(column[3]); t:SetJustifyH("RIGHT")
-    end
-    p:EnableMouseWheel(true)
-    p:SetScript("OnMouseWheel", function(_, delta) U.ScrollMobs(-delta * 3) end)
+    divider:SetColorTexture(.68, .52, .18, .35); divider:SetPoint("TOPLEFT", 10, 0); divider:SetSize(EXPANDED_WIDTH - 20, 1)
+    label(p, 10, "Level"):SetPoint("TOPLEFT", 10, -10)
+    label(p, 10, "Time to level"):SetPoint("TOPLEFT", 104, -10)
+    local status = label(p, 10, "Status"); status:SetPoint("TOPRIGHT", -10, -10); status:SetJustifyH("RIGHT")
+    p:EnableMouseWheel(true); p:SetScript("OnMouseWheel", function(_, delta) U.ScrollLevels(-delta * 3) end)
     for i = 1, 8 do
         local row = CreateFrame("Button", nil, p)
-        U.mobRows[i] = row
-        row:SetSize(MOB_INNER, 18); row:SetPoint("TOPLEFT", 10, -26 - (i - 1) * 18)
+        U.levelRows[i] = row; row:SetSize(EXPANDED_WIDTH - 20, 18); row:SetPoint("TOPLEFT", 10, -26 - (i - 1) * 19)
         local background = row:CreateTexture(nil, "BACKGROUND"); background:SetAllPoints()
         background:SetColorTexture(.45, .36, .18, i % 2 == 0 and .10 or .03)
-        local highlight = row:CreateTexture(nil, "HIGHLIGHT"); highlight:SetAllPoints()
-        highlight:SetColorTexture(1, .82, 0, .10)
-        row.nameText = label(row, 10, ""); row.nameText:SetPoint("LEFT", 0, 0)
-        row.nameText:SetWidth(124); row.nameText:SetWordWrap(false)
-        for _, column in ipairs({{"mobLevel", -230, 26}, {"xp", -168, 54}, {"killTime", -124, 36},
-            {"xpPerSecond", -76, 40}, {"respawn", 0, 68}}) do
-            local t = label(row, 10, ""); row[column[1]] = t
-            t:SetPoint("RIGHT", column[2], 0); t:SetWidth(column[3]); t:SetJustifyH("RIGHT")
-        end
-        row:EnableMouseWheel(true)
-        row:SetScript("OnMouseWheel", function(_, delta) U.ScrollMobs(-delta * 3) end)
+        row.level = label(row, 11, ""); row.level:SetPoint("LEFT", 0, 0); row.level:SetWidth(88)
+        row.duration = label(row, 11, ""); row.duration:SetPoint("LEFT", 94, 0); row.duration:SetWidth(184)
+        row.status = label(row, 10, ""); row.status:SetPoint("RIGHT", 0, 0); row.status:SetJustifyH("RIGHT"); row.status:SetWidth(100)
+        row:EnableMouseWheel(true); row:SetScript("OnMouseWheel", function(_, delta) U.ScrollLevels(-delta * 3) end)
         row:SetScript("OnEnter", function(self)
-            local kill = self.kill
-            if not kill then return end
-            GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText(kill.name)
-            GameTooltip:AddLine("Mob level: " .. (kill.mobLevel or "?"), 1, 1, 1)
-            GameTooltip:AddLine("XP received: " .. (kill.xp ~= nil and U.Number(kill.xp) or "..."), 1, 1, 1)
-            GameTooltip:AddLine("Your level at kill: " .. (kill.playerLevel or "?"), 1, 1, 1)
-            GameTooltip:AddLine("Kill time: " .. U.KillTime(kill.killTime, kill.killTimeEstimated), 1, 1, 1)
-            GameTooltip:AddLine("XP/s: " .. U.XPPerSecond(kill.xp, kill.killTime, kill.killTimeEstimated), 1, 1, 1)
-            if kill.killTimeEstimated then GameTooltip:AddLine("Estimated from public unit observations, not first-hit timestamps.", .8, .8, .8, true) end
-            local average, samples = A.Mobs.RespawnAverage(kill.name)
-            GameTooltip:AddLine("Respawn avg: " .. U.RespawnTime(average) .. " (" .. samples .. " samples)", 1, 1, 1)
-            GameTooltip:AddLine("Grouped by name only, regardless of mob level. Updated every 5 seconds.", .8, .8, .8, true)
-            if not average then GameTooltip:AddLine("Observe a living mob with this name after a kill to collect a sample.", .8, .8, .8, true) end
-            GameTooltip:AddLine("Recorded at " .. U.Time(kill.at) .. " since Reset", .7, .7, .7)
-            if not kill.mobLevel then GameTooltip:AddLine("The mob's level was not available from a visible unit.", .8, .8, .8, true) end
+            if not self.entry then return end
+            GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText(self.level:GetText())
+            GameTooltip:AddLine(self.status:GetText() .. ": " .. self.duration:GetText(), 1, 1, 1)
+            GameTooltip:AddLine(self.entry.complete and "Full observed online time for this level, including idle time." or
+                "Only observed time is available; time before tracking began is not invented.", .8, .8, .8, true)
             GameTooltip:Show()
         end)
         row:SetScript("OnLeave", function() GameTooltip:Hide() end)
     end
-    U.mobEmpty = label(p, 11, "No kills yet. Earn mob XP to start tracking.")
-    U.mobEmpty:SetPoint("TOPLEFT", 10, -32); U.mobEmpty:SetWidth(MOB_INNER)
-    U.mobPage = label(p, 9, ""); U.mobPage:SetPoint("TOPLEFT", 10, -179); U.mobPage:SetWidth(183)
-    U.mobClear = button(p, "Clear", -90, function()
-        A.Mobs.ClearHistory(); U.mobOffset = 0; U.RefreshMobs()
-    end)
-    U.mobClear:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText("Clear mob list")
-        GameTooltip:AddLine("XP, bag values and Kills/min continue.", 1, 1, 1, true)
-        GameTooltip:Show()
-    end)
-    U.mobClear:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    U.mobUp = button(p, "Up", -51, function() U.ScrollMobs(-8) end)
-    U.mobDown = button(p, "Down", -10, function() U.ScrollMobs(8) end)
-    for _, entry in ipairs({{U.mobClear, -90, 40}, {U.mobUp, -51, 34}, {U.mobDown, -10, 34}}) do
-        local b = entry[1]; b:SetSize(entry[3], 19); b:ClearAllPoints(); b:SetPoint("TOPRIGHT", entry[2], -174)
-        b.label:SetFont(FONT, 10, "")
-    end
+    U.levelPage = label(p, 9, ""); U.levelPage:SetPoint("TOPLEFT", 10, -185)
+    U.levelUp = button(p, "Up", -54, -180, 38, function() U.ScrollLevels(-8) end)
+    U.levelDown = button(p, "Down", -10, -180, 38, function() U.ScrollLevels(8) end)
 end
-
-function U.RefreshMobs()
-    if not U.mobPanel then return end
-    local expanded = A.db.mobExpanded
-    U.mobToggle.label:SetText("Kills/min: " .. A.Mobs.Rate() .. (expanded and " [-]" or " [+]"))
-    U.mobPanel:SetShown(expanded)
-    if U.mobExpanded ~= expanded then
-        if U.mobExpanded ~= nil or expanded then
+function U.RefreshLevels()
+    if not U.levelPanel then return end
+    local expanded = A.db.levelExpanded
+    U.levelToggle.label:SetText(expanded and "Levels [-]" or "Levels [+]")
+    U.levelPanel:SetShown(expanded)
+    if U.levelExpanded ~= expanded then
+        if U.levelExpanded ~= nil or expanded then
             local left, top = U.panel:GetLeft(), U.panel:GetTop()
-            U.panel:SetSize(expanded and MOB_WIDTH or WIDTH, expanded and 400 or 195)
+            U.panel:SetSize(expanded and EXPANDED_WIDTH or WIDTH, expanded and 465 or HEIGHT)
             if left and top then
-                U.panel:ClearAllPoints()
-                U.panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left - UIParent:GetLeft(), top - UIParent:GetTop())
+                U.panel:ClearAllPoints(); U.panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left - UIParent:GetLeft(), top - UIParent:GetTop())
             end
         end
-        U.mobExpanded, U.mobRevision = expanded, nil
+        U.levelExpanded = expanded
     end
-    if U.mobRevision == A.Mobs.revision then return end
-    U.mobRevision = A.Mobs.revision
-    local kills, count = A.db.kills, #A.db.kills
-    U.mobOffset = math.min(U.mobOffset, math.max(0, count - 8))
-    for i, row in ipairs(U.mobRows) do
-        local kill = kills[U.mobOffset + i]
-        row.kill = kill; row:SetShown(kill ~= nil)
-        if kill then
-            row.nameText:SetText(kill.name)
-            row.mobLevel:SetText(kill.mobLevel or "?")
-            row.xp:SetText((kill.xp ~= nil and U.Number(kill.xp) or "...") .. "@" .. (kill.playerLevel or "?"))
-            row.killTime:SetText(U.KillTime(kill.killTime, kill.killTimeEstimated))
-            row.xpPerSecond:SetText(U.XPPerSecond(kill.xp, kill.killTime, kill.killTimeEstimated))
-            row.respawn:SetText(U.RespawnTime(A.Mobs.RespawnAverage(kill.name)))
+    local state, count = A.db.levelState, #A.db.levels + 1
+    U.levelOffset = math.min(U.levelOffset, math.max(0, count - 8))
+    for i, row in ipairs(U.levelRows) do
+        local index = U.levelOffset + i
+        local current = index == 1
+        local entry = current and state or A.db.levels[index - 1]
+        row.entry = entry; row:SetShown(entry ~= nil)
+        if entry then
+            local atCap = current and A.last and A.last.maximum == 0
+            row.level:SetText(current and (entry.level .. (atCap and "" or (" -> " .. (entry.level + 1)))) or (entry.from .. " -> " .. entry.to))
+            local seconds = current and A.Levels.CurrentSeconds() or entry.seconds
+            row.duration:SetText(atCap and "--" or (A.IsNumber(seconds) and U.SessionTime(seconds) or "--"))
+            row.status:SetText(atCap and "Max level" or (current and (entry.complete and "In progress" or "Partial") or
+                (not seconds and "Unavailable" or (entry.complete and "Complete" or "Partial"))))
         end
     end
-    U.mobEmpty:SetShown(count == 0)
-    U.mobPage:SetText(count == 0 and ("0 / " .. A.Mobs.LIMIT) or
-        ((U.mobOffset + 1) .. "-" .. math.min(count, U.mobOffset + 8) .. " / " .. count .. "  (mouse wheel)"))
-    U.mobUp:SetShown(count > 8); U.mobDown:SetShown(count > 8)
+    U.levelPage:SetText((U.levelOffset + 1) .. "-" .. math.min(count, U.levelOffset + 8) .. " / " .. count .. " (mouse wheel)")
+    U.levelUp:SetShown(count > 8); U.levelDown:SetShown(count > 8)
 end
 
 function U.Create()
     if U.panel then return end
     local f = panel("Frame", "ElmoLevelingPanel", UIParent)
-    U.panel = f
-    f:SetSize(WIDTH, 195)
-    f:SetFrameStrata("MEDIUM")
-    f:SetMovable(true)
-    f:SetClampedToScreen(true)
-    U.Place()
-
+    U.panel = f; f:SetSize(WIDTH, HEIGHT); f:SetFrameStrata("MEDIUM"); f:SetMovable(true); f:SetClampedToScreen(true); U.Place()
     U.anchor = CreateFrame("Frame", nil, f)
-    U.anchor:SetPoint("TOPLEFT", 1, -1)
-    U.anchor:SetWidth(WIDTH - 127)
-    U.anchor:SetHeight(35)
-    U.anchor:EnableMouse(true)
-    U.anchor:RegisterForDrag("LeftButton")
+    U.anchor:SetPoint("TOPLEFT", 1, -1); U.anchor:SetSize(WIDTH - 117, 36)
+    U.anchor:EnableMouse(true); U.anchor:RegisterForDrag("LeftButton")
     U.anchor:SetScript("OnDragStart", function() if not A.db.locked then f:StartMoving() end end)
     U.anchor:SetScript("OnDragStop", function()
-        f:StopMovingOrSizing()
-        local x, y = f:GetLeft() - UIParent:GetLeft(), f:GetTop() - UIParent:GetTop()
-        A.db.position = {x = x, y = y}
-        U.Place()
+        f:StopMovingOrSizing(); A.db.position = {x = f:GetLeft() - UIParent:GetLeft(), y = f:GetTop() - UIParent:GetTop()}; U.Place()
     end)
     U.anchor:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:SetText("ElmoLeveling")
-        GameTooltip:AddLine("XP/min: XP earned in the last 60 seconds.", 1, 1, 1, true)
-        GameTooltip:AddLine("XP/min values refresh every 5 seconds.", .8, .8, .8, true)
-        GameTooltip:AddLine("XP/hr: XP earned in the last 60 minutes.", 1, 1, 1, true)
-        GameTooltip:AddLine("Avg: average rates since Reset, including all XP sources.", .8, .8, .8, true)
-        GameTooltip:AddLine("Time includes idle time while online; offline time is excluded.", .8, .8, .8, true)
-        GameTooltip:AddLine("Combat counts time while your character is in combat; Total counts all online time since Reset.", .8, .8, .8, true)
-        GameTooltip:AddLine("Bags (sell value): vendor sell price x quantity in your backpack and bags.", 1, 1, 1, true)
-        GameTooltip:AddLine("Bag count: stacks / total item quantity.", .8, .8, .8, true)
+        GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText("ElmoLeveling")
+        GameTooltip:AddLine("Actual XP earned in fixed 1-hour and 24-hour periods from Start.", 1, 1, 1, true)
+        GameTooltip:AddLine("The large value shows the last completed period, or the first period's actual XP while it is in progress.", .8, .8, .8, true)
+        GameTooltip:AddLine("No averages, medians or projected hourly rates. All XP sources count.", .8, .8, .8, true)
+        GameTooltip:AddLine("Idle and out-of-combat online time count. Offline time does not.", .8, .8, .8, true)
+        GameTooltip:AddLine("Periods resume after reload/login. Restart begins both periods again without clearing level times.", .8, .8, .8, true)
+        GameTooltip:AddLine("Bags show vendor sell value. Purple borders retain the class/role upgrade rules.", .8, .8, .8, true)
         GameTooltip:AddLine(A.db.locked and "Click Unlock to move this panel." or "Drag the title to move this panel.", 1, .82, 0, true)
         GameTooltip:Show()
     end)
     U.anchor:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    local title = label(U.anchor, 13, "ElmoLeveling")
-    title:SetPoint("TOPLEFT", 9, -3)
-    title:SetTextColor(1, .82, 0)
-    U.character = label(U.anchor, 14, "")
-    U.character:SetPoint("TOPLEFT", 9, -19)
-    U.character:SetWidth(145)
-    U.character:SetWordWrap(false)
-
-    local recent = label(f, 10, "Recent")
-    recent:SetPoint("TOPRIGHT", -91, -29)
-    recent:SetWidth(78)
-    recent:SetJustifyH("RIGHT")
-    local average = label(f, 10, "Average")
-    average:SetPoint("TOPRIGHT", -10, -29)
-    average:SetWidth(78)
-    average:SetJustifyH("RIGHT")
-    local minute = label(f, 11, "XP/min (60s)")
-    minute:SetPoint("TOPLEFT", 10, -47)
-    local hour = label(f, 11, "XP/hr (60m)")
-    hour:SetPoint("TOPLEFT", 10, -70)
-    U.minute = label(f, 16, "0")
-    U.minute:SetPoint("TOPRIGHT", -91, -43)
-    U.minute:SetWidth(78)
-    U.minute:SetJustifyH("RIGHT")
-    U.hour = label(f, 16, "0")
-    U.hour:SetPoint("TOPRIGHT", -91, -66)
-    U.hour:SetWidth(78)
-    U.hour:SetJustifyH("RIGHT")
-    U.averageMinute = label(f, 14, "0")
-    U.averageMinute:SetPoint("TOPRIGHT", -10, -45)
-    U.averageMinute:SetWidth(78)
-    U.averageMinute:SetJustifyH("RIGHT")
-    U.averageHour = label(f, 14, "0")
-    U.averageHour:SetPoint("TOPRIGHT", -10, -68)
-    U.averageHour:SetWidth(78)
-    U.averageHour:SetJustifyH("RIGHT")
-    U.total = label(f, 11, "")
-    U.total:SetPoint("TOPLEFT", 10, -92)
-    U.total:SetWidth(220)
-    local bagDivider = f:CreateTexture(nil, "ARTWORK")
-    bagDivider:SetColorTexture(.68, .52, .18, .35)
-    bagDivider:SetPoint("TOPLEFT", 10, -130)
-    bagDivider:SetSize(INNER, 1)
-    U.bagLabel = label(f, 11, "Bags (sell value):")
-    U.bagLabel:SetPoint("TOPLEFT", 10, -141)
-    U.bagLabel:SetWidth(118)
-    U.bagValue = label(f, 15, "Loading...")
-    U.bagValue:SetPoint("TOPRIGHT", -10, -137)
-    U.bagValue:SetWidth(186)
-    U.bagValue:SetJustifyH("RIGHT")
-    U.bagStatus = label(f, 9, "")
-    U.bagStatus:SetPoint("TOPLEFT", 10, -170)
-    U.bagStatus:SetWidth(158)
-    U.time = label(f, 11, "Combat 0h 0m 0s | Total 0h 0m 0s")
-    U.time:SetPoint("TOPLEFT", 10, -111)
-    U.time:SetWidth(INNER)
-    U.time:SetTextColor(.7, .7, .7)
-    U.lock = button(f, "Lock", -88, function() A.SetLocked(not A.db.locked) end)
-    U.reset = button(f, "Reset", -12, A.Reset)
-    U.CreateMobs()
+    local title = label(U.anchor, 13, "ElmoLeveling"); title:SetPoint("TOPLEFT", 9, -3); title:SetTextColor(1, .82, 0)
+    U.character = label(U.anchor, 14, ""); U.character:SetPoint("TOPLEFT", 9, -20); U.character:SetWidth(200); U.character:SetWordWrap(false)
+    for _, entry in ipairs({{"hour", -51}, {"day", -105}}) do
+        local name, y = entry[1], entry[2]
+        U[name .. "Caption"] = label(f, 11, ""); U[name .. "Caption"]:SetPoint("TOPLEFT", 10, y)
+        U[name] = label(f, 18, "0"); U[name]:SetPoint("TOPRIGHT", -10, y + 3); U[name]:SetWidth(150); U[name]:SetJustifyH("RIGHT")
+        U[name .. "Progress"] = label(f, 10, ""); U[name .. "Progress"]:SetPoint("TOPLEFT", 10, y - 22); U[name .. "Progress"]:SetWidth(WIDTH - 20)
+        U[name .. "Progress"]:SetTextColor(.7, .7, .7)
+    end
+    U.time = label(f, 11, ""); U.time:SetPoint("TOPLEFT", 10, -157); U.time:SetWidth(WIDTH - 20)
+    local divider = f:CreateTexture(nil, "ARTWORK")
+    divider:SetColorTexture(.68, .52, .18, .35); divider:SetPoint("TOPLEFT", 10, -180); divider:SetSize(WIDTH - 20, 1)
+    label(f, 11, "Bags (sell value):"):SetPoint("TOPLEFT", 10, -193)
+    U.bagValue = label(f, 15, "Loading..."); U.bagValue:SetPoint("TOPRIGHT", -10, -189); U.bagValue:SetWidth(186); U.bagValue:SetJustifyH("RIGHT")
+    U.bagStatus = label(f, 9, ""); U.bagStatus:SetPoint("TOPLEFT", 10, -230); U.bagStatus:SetWidth(158)
+    U.lock = button(f, "Lock", -88, -222, 69, function() A.SetLocked(not A.db.locked) end)
+    U.reset = button(f, "Restart", -12, -222, 69, A.Reset)
+    U.CreateLevels()
 end
-
-function U.Update(force)
+function U.Update()
     if not U.panel then return end
     local level = UnitLevel("player")
-    U.character:SetText((A.Text(UnitName("player")) or "Player") .. " lv. " ..
-        math.max(A.IsNumber(level) and level or 0, A.expectedLevel or 0))
-    local xp, seconds, averageMinute, averageHour, minute, hour = A.Stats()
-    local now = GetTime()
-    if force or not U.minuteUpdatedAt or now - U.minuteUpdatedAt >= 5 then
-        U.minute:SetText(U.Number(minute))
-        U.averageMinute:SetText(U.Number(averageMinute))
-        local elapsed = now - (U.minuteUpdatedAt or now)
-        U.minuteUpdatedAt = (force or not U.minuteUpdatedAt) and now or (now - elapsed % 5)
+    U.character:SetText((A.Text(UnitName("player")) or "Player") .. " lv. " .. math.max(A.IsNumber(level) and level or 0, A.expectedLevel or 0))
+    local stats = A.Stats()
+    for _, name in ipairs({"hour", "day"}) do
+        local value, duration = stats[name], name == "hour" and "1h" or "24h"
+        U[name .. "Caption"]:SetText("XP · " .. (value.completed and "last full " or "first ") .. duration)
+        U[name]:SetText(A.db.xpGap and "--" or U.Number(value.xp))
+        U[name .. "Progress"]:SetText((value.completed and ("Current: " .. U.Number(value.currentXP) .. " XP · ") or "In progress · ") .. U.SessionTime(value.elapsed) .. " / " .. duration)
     end
-    U.hour:SetText(U.Number(hour))
-    U.averageHour:SetText(U.Number(averageHour))
-    U.total:SetText("Session XP: " .. U.Number(xp))
+    U.time:SetText(A.db.xpGap and "Skipped XP data · Restart periods." or ("Since Start: " .. U.SessionTime(stats.elapsed)))
     local bags = A.Bags.state
     if bags then
         U.bagValue:SetText((bags.pending > 0 and ">= " or "") .. U.Money(bags.value))
-        U.bagStatus:SetText(bags.pending > 0 and ("Loading: " .. bags.pending) or
-            (bags.stacks .. " stacks / " .. U.Number(bags.items)))
+        U.bagStatus:SetText(bags.pending > 0 and ("Loading: " .. bags.pending) or (bags.stacks .. " stacks / " .. U.Number(bags.items)))
     end
-    U.time:SetText("Combat " .. U.SessionTime(A.CombatElapsed()) .. " | Total " .. U.SessionTime(seconds))
     U.lock.label:SetText(A.db.locked and "Unlock" or "Lock")
     U.panel:SetShown(not A.db.hidden)
-    U.RefreshMobs()
+    U.RefreshLevels()
 end

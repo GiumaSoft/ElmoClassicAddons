@@ -146,8 +146,8 @@ class OptionsTests(unittest.TestCase):
             p.visible:SetChecked(false);optionsClick(p.visible);assert(A.db.hidden and not A.UI.panel:IsShown())
             optionsClick(p.center);assert(not A.db.hidden and A.UI.panel:IsShown() and A.db.position==nil and p.visible:GetChecked())
             p.locked:SetChecked(true);optionsClick(p.locked);assert(A.db.locked)
-            p.expanded:SetChecked(true);optionsClick(p.expanded);assert(A.db.mobExpanded)
-            A.db.xp=123;optionsClick(p.clear);assert(A.db.xp==123 and #A.db.kills==0)
+            p.expanded:SetChecked(true);optionsClick(p.expanded);assert(A.db.levelExpanded)
+            A.db.xp=123;optionsClick(p.clear);assert(A.db.xp==123 and #A.db.levels==0)
             optionsClick(p.reset);assert(A.db.xp==0)
             A.Command('unlock');p=optionsShow('ElmoLeveling');assert(not p.locked:GetChecked())''')
 
