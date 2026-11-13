@@ -9,7 +9,7 @@ One source project for the locally maintained Elmo addon family. Interface and m
 | ElmoSpellTracker | 1.0.4 | Classic Era 11509, Forever 16001 |
 | ElmoQuestEnhanced | 1.2.1 | Classic Era 11509, Forever 16001 |
 | ElmoLFG | 1.4.4 | Classic Era 11509, Forever 16001 |
-| ElmoLFM | 1.0.8 | Classic Era 11509, Forever 16001 |
+| ElmoLFM | 1.0.7 | Classic Era 11509, Forever 16001 |
 | ElmoRare | 1.0.0 | Classic Era 11509, Forever 16001 |
 | ElmoBuff | 1.0.2 | Classic Era 11509, Forever 16001 |
 
