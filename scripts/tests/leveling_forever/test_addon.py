@@ -592,36 +592,33 @@ class LevelingTests(unittest.TestCase):
         MOCK.start(); assert(A.Upgrades.Profile().name == 'Healing')""")
 
 
-    def test_actual_xp_has_no_hourly_projection_and_includes_idle(self):
+
+
+
+
+
+    def test_single_line_shows_actual_time_and_xp_including_idle(self):
         self.check("""MOCK.start();MOCK.advance(60);MOCK.gain(100)
-        local s=A.Stats();assert(s.hour.xp==100 and s.day.xp==100 and s.elapsed==60)
-        MOCK.advance(1800);s=A.Stats();assert(s.hour.xp==100 and s.hour.elapsed==1860)
-        assert(A.UI.hour:GetText()=='100' and A.UI.day:GetText()=='100')
-        assert(A.UI.minute==nil and A.UI.averageHour==nil and A.Mobs==nil)""")
+        local s=A.Stats();assert(s.totalXP==100 and s.elapsed==60)
+        assert(MOCK.plain(A.UI.summary:GetText())=='Time 00:01:00  ·  XP +100')
+        MOCK.advance(1800);s=A.Stats();assert(s.totalXP==100 and s.elapsed==1860)
+        assert(A.UI.hour==nil and A.UI.day==nil and A.UI.averageHour==nil and A.Mobs==nil)
+        assert(A.UI.panel.height==164 and A.db.periods==nil)""")
 
-    def test_first_full_hour_is_retained_while_the_next_hour_accumulates(self):
-        self.check("""MOCK.start();MOCK.advance(1800);MOCK.gain(80);MOCK.advance(1800)
-        local s=A.Stats();assert(s.hour.completed and s.hour.xp==80 and s.hour.currentXP==0 and s.hour.elapsed==0)
-        MOCK.advance(60);MOCK.gain(20);s=A.Stats()
-        assert(s.hour.xp==80 and s.hour.currentXP==20 and s.day.xp==100)
-        assert(A.UI.hourCaption:GetText()=='XP · last full 1h')
-        assert(A.UI.hourProgress:GetText():find('Current: 20 XP',1,true))""")
+    def test_session_continues_across_hour_and_day_boundaries_without_resets(self):
+        self.check("""MOCK.start();MOCK.gain(75);MOCK.advance(3600);MOCK.gain(25)
+        local s=A.Stats();assert(s.totalXP==100 and s.elapsed==3600)
+        MOCK.advance(86400);s=A.Stats();assert(s.totalXP==100 and s.elapsed==90000)
+        assert(MOCK.plain(A.UI.summary:GetText())=='Time 1d 01:00:00  ·  XP +100')
+        MOCK.gain(40);assert(A.Stats().totalXP==140 and A.TickPeriods==nil)""")
 
-    def test_exact_boundary_award_belongs_to_the_new_period(self):
-        self.check("""MOCK.start();MOCK.gain(40);MOCK.advance(3600);MOCK.gain(30)
-        local s=A.Stats();assert(s.hour.xp==40 and s.hour.currentXP==30 and s.day.xp==70)
-        MOCK.advance(3600);s=A.Stats();assert(s.hour.xp==30 and s.hour.currentXP==0)""")
-
-    def test_actual_twenty_four_hours_and_idle_full_periods(self):
-        self.check("""MOCK.start();MOCK.gain(75);MOCK.advance(86399)
-        local s=A.Stats();assert(not s.day.completed and s.day.xp==75 and s.day.elapsed==86399)
-        MOCK.advance(1);s=A.Stats();assert(s.day.completed and s.day.xp==75 and s.day.currentXP==0)
-        MOCK.gain(25);MOCK.advance(86400);s=A.Stats();assert(s.day.xp==25 and s.hour.xp==0)""")
-
-    def test_idle_periods_are_zero_instead_of_reusing_an_old_award(self):
-        self.check("""MOCK.start();MOCK.gain(80);MOCK.advance(3*3600)
-        local s=A.Stats();assert(s.hour.completed and s.hour.xp==0 and s.hour.currentXP==0)
-        assert(s.day.xp==80 and s.day.elapsed==10800)""")
+    def test_existing_session_totals_and_explicit_start_are_preserved(self):
+        self.check("""ElmoLevelingDB={xp=12450,seconds=3600,measurementAt=1200,
+            periods={hour={xp=20,start=3500}}}
+        MOCK.start();local s=A.Stats();assert(s.totalXP==12450 and s.elapsed==2400)
+        assert(A.db.periods==nil and MOCK.plain(A.UI.summary:GetText())=='Time 00:40:00  ·  XP +12,450')
+        A.Command('start');assert(A.Stats().totalXP==0 and A.Stats().elapsed==0)
+        assert(MOCK.plain(A.UI.summary:GetText())=='Time 00:00:00  ·  XP +0')""")
 
     def test_restart_preserves_current_level_clock_and_completed_history(self):
         self.check("""MOCK.start();MOCK.event('TIME_PLAYED_MSG',5000,1000);MOCK.advance(10)
@@ -629,18 +626,18 @@ class LevelingTests(unittest.TestCase):
         MOCK.event('PLAYER_LEVEL_UP',2);MOCK.event('PLAYER_XP_UPDATE','player')
         MOCK.advance(40);local seconds=A.Levels.CurrentSeconds();assert(#A.db.levels==1)
         A.Reset();local s=A.Stats()
-        assert(s.hour.xp==0 and s.day.xp==0 and s.elapsed==0 and #A.db.levels==1)
+        assert(s.totalXP==0 and s.elapsed==0 and #A.db.levels==1)
         assert(A.Levels.CurrentSeconds()==seconds and A.db.levels[1].seconds==1010)
-        MOCK.advance(20);MOCK.gain(30);assert(A.Stats().hour.xp==30 and A.Levels.CurrentSeconds()==60)""")
+        MOCK.advance(20);MOCK.gain(30);assert(A.Stats().totalXP==30 and A.Levels.CurrentSeconds()==60)""")
 
-    def test_periods_survive_logout_and_exclude_offline_time(self):
+    def test_session_survives_logout_and_excludes_offline_time(self):
         self.check("""MOCK.start();MOCK.advance(1200);MOCK.gain(50);MOCK.event('PLAYER_LOGOUT')
         assert(A.db.seconds==1200 and A.frame:GetScript('OnUpdate')==nil)
         MOCK.advance(100000);MOCK.event('PLAYER_ENTERING_WORLD',true,false)
-        assert(A.Stats().hour.xp==50 and A.Stats().hour.elapsed==1200)
-        MOCK.advance(2400);assert(A.Stats().hour.completed and A.Stats().hour.xp==50)""")
+        assert(A.Stats().totalXP==50 and A.Stats().elapsed==1200)
+        MOCK.advance(2400);assert(A.Stats().elapsed==3600 and A.Stats().totalXP==50)""")
 
-    def test_fresh_lua_reload_restores_period_and_level_state(self):
+    def test_fresh_lua_reload_restores_session_and_level_state(self):
         self.check("""MOCK.start();MOCK.event('TIME_PLAYED_MSG',5000,800)
         MOCK.advance(1200);MOCK.gain(50);MOCK.event('PLAYER_LOGOUT')""")
         def unpack(value):
@@ -649,15 +646,15 @@ class LevelingTests(unittest.TestCase):
         self.setUp()
         self.vm.globals().ElmoLevelingDB=self.vm.table_from(saved,recursive=True)
         self.check("""MOCK.time=100000;MOCK.xp=150;MOCK.start(false,true)
-        assert(A.Stats().hour.xp==50 and A.Stats().hour.elapsed==1200)
+        assert(A.Stats().totalXP==50 and A.Stats().elapsed==1200)
         assert(A.Levels.CurrentSeconds()==2000)
-        MOCK.advance(2400);assert(A.Stats().hour.xp==50 and A.Stats().hour.completed)
+        MOCK.advance(2400);assert(A.Stats().totalXP==50 and A.Stats().elapsed==3600)
         assert(A.Levels.CurrentSeconds()==4400)""")
 
-    def test_zone_events_do_not_restart_windows_or_repeat_played_requests(self):
+    def test_zone_events_do_not_restart_session_or_repeat_played_requests(self):
         self.check("""MOCK.start();MOCK.advance(120);MOCK.gain(20)
         MOCK.event('PLAYER_ENTERING_WORLD',false,false);MOCK.advance(30)
-        assert(A.Stats().hour.xp==20 and A.Stats().hour.elapsed==150 and MOCK.playedRequests==1)""")
+        assert(A.Stats().totalXP==20 and A.Stats().elapsed==150 and MOCK.playedRequests==1)""")
 
     def test_level_transition_uses_native_full_played_time_and_all_idle(self):
         self.check("""MOCK.level=38;MOCK.start();MOCK.event('TIME_PLAYED_MSG',200000,90000)
@@ -706,21 +703,21 @@ class LevelingTests(unittest.TestCase):
         MOCK.event('PLAYER_LEVEL_UP',60);MOCK.event('PLAYER_XP_UPDATE','player')
         assert(A.db.xp==100 and #A.db.levels==1 and A.db.levels[1].seconds==20010)
         assert(A.UI.levelRows[1].status:GetText()=='Max level')
-        MOCK.advance(3600);assert(A.Stats().hour.xp==100)""")
+        MOCK.advance(3600);assert(A.Stats().totalXP==100)""")
 
     def test_hidden_meter_continues_tracking_without_mob_events(self):
         self.check("""MOCK.start();A.Command('hide');MOCK.advance(80);MOCK.gain(30)
-        assert(A.Stats().hour.xp==30 and not A.UI.panel:IsShown())
+        assert(A.Stats().totalXP==30 and not A.UI.panel:IsShown())
         for _,event in ipairs({'COMBAT_LOG_EVENT_UNFILTERED','CHAT_MSG_COMBAT_XP_GAIN','PLAYER_TARGET_CHANGED',
             'UPDATE_MOUSEOVER_UNIT','NAME_PLATE_UNIT_ADDED','UNIT_HEALTH','PLAYER_REGEN_DISABLED'})do
             assert(not A.frame.events[event])
         end
-        A.Command('show');assert(A.UI.hour:GetText()=='30')""")
+        A.Command('show');assert(MOCK.plain(A.UI.summary:GetText()):find('XP +30',1,true))""")
 
-    def test_corrupt_data_and_retired_samples_do_not_seed_new_periods(self):
+    def test_retired_samples_do_not_change_the_saved_session(self):
         self.check("""ElmoLevelingDB={xp=37,seconds=20,history={{at=10,xp=500}},kills={{}},respawns={{}},
             periods={hour={start=math.huge,xp=200},day={start=10,xp=-4}},levelState={level='bad'}}
-        MOCK.start();local s=A.Stats();assert(s.hour.xp==0 and s.day.xp==0 and s.elapsed==0)
+        MOCK.start();local s=A.Stats();assert(s.totalXP==37 and s.elapsed==20)
         assert(A.db.xp==37 and A.db.kills==nil and A.db.history==nil and A.db.respawns==nil)
         assert(A.db.levelState.level==1 and not A.db.levelState.complete)""")
 
@@ -735,9 +732,9 @@ class LevelingTests(unittest.TestCase):
         self.check("""MOCK.start();MOCK.advance(60);MOCK.level,MOCK.xp,MOCK.maximum=3,20,1400
         MOCK.event('PLAYER_LEVEL_UP',3);MOCK.event('PLAYER_XP_UPDATE','player')
         assert(A.db.xpGap and A.db.xp==0 and #A.db.levels==2)
-        assert(A.db.levels[1].seconds==nil and A.UI.hour:GetText()=='--')
+        assert(A.db.levels[1].seconds==nil and MOCK.plain(A.UI.summary:GetText()):find('XP --',1,true))
         assert(A.UI.levelRows[2].status:GetText()=='Unavailable')
-        A.Reset();assert(not A.db.xpGap and #A.db.levels==2 and A.UI.hour:GetText()=='0')""")
+        A.Reset();assert(not A.db.xpGap and #A.db.levels==2 and MOCK.plain(A.UI.summary:GetText()):find('XP +0',1,true))""")
 
     def test_level_history_scrolling_clear_and_xp_restart_are_independent(self):
         self.check("""MOCK.start();for level=2,15 do MOCK.advance(10);A.Levels.Advance(level) end

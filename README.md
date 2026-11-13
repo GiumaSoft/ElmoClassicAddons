@@ -4,7 +4,7 @@ One source project for the locally maintained Elmo addon family. Interface and m
 
 | Addon | Release | Clients |
 | --- | --- | --- |
-| ElmoLeveling | 2.0.0 | Classic Era 11509, Forever 16001 |
+| ElmoLeveling | 2.0.1 | Classic Era 11509, Forever 16001 |
 | ElmoPlater | 2.4.0 | Classic Era 11509, Forever 16001 |
 | ElmoSpellTracker | 1.0.4 | Classic Era 11509, Forever 16001 |
 | ElmoQuestEnhanced | 1.2.1 | Classic Era 11509, Forever 16001 |
@@ -61,8 +61,8 @@ players once and optionally invites contacted players who reply inv. Open
 Right-clicking a player row requests a direct group invitation.
 Its independent Lua 5.1 checks are in `scripts/tests/ElmoLFM/test_addon.py`.
 
-ElmoLeveling 2.0.0 measures actual XP in fixed 1-hour and 24-hour online periods
-and records time per level in an expandable history. Idle time counts. Mob XP
-records, kill timing and respawn sampling are removed. Purple equipment upgrade
-borders retain their rules; all class/specialization mappings, weights and
-comparison formulas are documented in `ElmoLeveling/UPGRADE_RULES.md`.
+ElmoLeveling 2.0.1 displays elapsed online time and earned XP in one compact
+session line and records time per level in an expandable history. Idle time
+counts. Mob XP records, kill timing and respawn sampling are removed. Purple
+equipment upgrade borders retain their rules; class/specialization mappings,
+weights and comparison formulas are in `ElmoLeveling/UPGRADE_RULES.md`.

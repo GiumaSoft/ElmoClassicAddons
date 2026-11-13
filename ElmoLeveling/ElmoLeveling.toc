@@ -1,8 +1,8 @@
 ## Interface: 16001
 ## Title: ElmoLeveling
-## Notes: Actual XP over 1/24 hours, time per level and usable equipment upgrades.
+## Notes: Elapsed time, earned XP, time per level and usable equipment upgrades.
 ## Author: Giuseppe
-## Version: 2.0.0
+## Version: 2.0.1
 ## X-Curse-Project-ID: 1778256
 ## SavedVariablesPerCharacter: ElmoLevelingDB
 ## OptionalDeps: BetterBags

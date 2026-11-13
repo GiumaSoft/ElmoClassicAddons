@@ -1,38 +1,33 @@
-# ElmoLeveling 2.0.0
+# ElmoLeveling 2.0.1
 
-Actual XP earned over one hour and 24 hours, time per level, and purple equipment
+Elapsed time and actual XP earned in one compact line, time per level, and purple equipment
 upgrade borders for **Classic Era 1.15.9** and **WoW Forever 1.60.1**.
 The English dashboard keeps the dark and bronze Elmo style.
 
-## Actual XP periods
+## Session line
 
-The first measurement starts when the addon first runs. **Restart**, `/elvl start`
-or `/elvl reset` begins both periods again from zero. They are fixed one-hour
-and 24-hour periods from that start, using online time. All idle, travel, city,
-AFK and out-of-combat time counts; offline time does not. Reloading, logging out
-or changing zones does not reset a measurement.
-
-Each period adds only XP actually awarded to the player's XP bar, including
-kills, quests, exploration and rested bonuses. There is no average, median,
-per-minute conversion or extrapolation to a full hour/day.
+The compact dashboard shows a single line, for example:
 
 ```text
-periodXP = sum(actual player XP awards recorded within that online period)
-periodElapsed = online seconds since that period started
+Time 01:23:45  ·  XP +12,450
 ```
 
-Before the first hour or day completes, its large number shows actual XP earned
-so far and is labelled **first 1h** / **first 24h**, **In progress**. When a period
-completes, the large number retains its actual completed total, labelled
-**last full 1h** / **last full 24h**. The line below shows the next period's actual
-XP and elapsed time. Periods continue through idle time; an entirely idle
-completed period correctly records zero XP. An award exactly at a boundary
-belongs to the new period. Only the most recent completed total is retained.
+Time is highlighted in gold; earned XP is purple. Labels are muted, with a
+bronze separator inside a subtle inset panel. After 24 hours the clock includes
+days, for example `1d 03:12:09`. There are no hourly/day counters or projections.
 
-Existing pre-2.0 session totals are not invented as new hour/day measurements.
-If several levels are skipped between readable XP snapshots, the intervening
-XP requirements cannot be reconstructed safely: the totals show **--** and
-request a fresh start rather than publish an estimated award.
+**Restart**, `/elvl start` or `/elvl reset` resets elapsed time and earned XP
+together. All online time counts, including idle, travel, city, AFK and
+out-of-combat time. Offline time does not count. The session resumes after
+reload/login and is not reset by changing zones or crossing an hour/day boundary.
+
+XP is read from the player's XP bar and includes kills, quests, exploration and
+rested bonuses. Existing saved totals and preferences are retained. Retired
+hour/day samples are discarded without changing level history or gear rules.
+
+If multiple levels are skipped between readable XP snapshots, the intervening
+XP requirements cannot be reconstructed safely: XP shows **--** until Restart.
+The timer continues. No missing XP award is estimated.
 
 ## Time per level
 
@@ -85,7 +80,7 @@ Equipment, bank contents, auction prices and wallet gold are excluded.
 
 Open `/elvl` or `/elmoleveling` to show/hide the dashboard. `/elvl show`, `hide`,
 `lock`, `unlock` and `center` remain available. `/elvl start` and `reset` restart
-the XP periods. Visibility, dragging lock, level-history expansion, centering,
+the session. Visibility, dragging lock, level-history expansion, centering,
 restart and history clearing are accessible from **Options > AddOns > ElmoLeveling**.
 
 Use the package labelled **classic** for Classic Era and **forever** for Forever.
@@ -105,7 +100,7 @@ and requests the same [RequestTimePlayed API used by /played](https://github.com
 No combat-log, mob-XP chat, target, mouseover or nameplate observation is used.
 
 Automated Lua 5.1 checks execute the actual addon with explicit native-API
-fixtures. They cover period boundaries, idle time, reload/logout, XP rollover,
+fixtures. They cover long sessions, idle time, reload/logout, XP rollover,
 level timing, current profiles, item comparisons and both client variants.
 Live server permissions and rendering still require an in-game check.
 

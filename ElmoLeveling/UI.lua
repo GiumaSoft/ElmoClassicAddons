@@ -3,7 +3,7 @@ local U = {}
 A.UI = U
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local FONT = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
-local WIDTH, EXPANDED_WIDTH, HEIGHT = 332, 408, 250
+local WIDTH, EXPANDED_WIDTH, HEIGHT = 332, 408, 164
 
 local function label(parent, size, text)
     local f = parent:CreateFontString(nil, "OVERLAY")
@@ -36,6 +36,11 @@ function U.SessionTime(seconds)
     return string.format("%dd %02dh %02dm %02ds", math.floor(seconds / 86400),
         math.floor(seconds / 3600) % 24, math.floor(seconds / 60) % 60, seconds % 60)
 end
+function U.Clock(seconds)
+    seconds = math.floor(math.max(0, seconds))
+    local clock = string.format("%02d:%02d:%02d", math.floor(seconds / 3600) % 24, math.floor(seconds / 60) % 60, seconds % 60)
+    return (seconds >= 86400 and (math.floor(seconds / 86400) .. "d ") or "") .. clock
+end
 function U.Money(copper, signed)
     local prefix = signed and (copper > 0 and "+" or copper < 0 and "-" or "") or ""
     copper = math.floor(math.abs(copper))
@@ -58,7 +63,7 @@ function U.RegisterOptions()
     local p = CreateFrame("Frame", nil, UIParent)
     U.optionsPanel = p; p:Hide()
     label(p, 16, "ElmoLeveling"):SetPoint("TOPLEFT", 16, -16)
-    label(p, 12, "Actual 1-hour / 24-hour XP, time per level and equipment upgrades."):SetPoint("TOPLEFT", 16, -48)
+    label(p, 12, "Elapsed time, earned XP, time per level and equipment upgrades."):SetPoint("TOPLEFT", 16, -48)
     local function check(value, y, change)
         local c = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
         c:SetPoint("TOPLEFT", 16, y); c:SetSize(26, 26)
@@ -75,10 +80,10 @@ function U.RegisterOptions()
         return b
     end
     p.center = action("Center and show tracker", -196, function() A.Command("center"); p.visible:SetChecked(true) end)
-    p.reset = action("Restart XP periods", -234, A.Reset)
+    p.reset = action("Restart session", -234, A.Reset)
     p.clear = action("Clear completed level history", -272, function() A.Levels.ClearHistory(); U.levelOffset = 0; U.RefreshLevels() end)
     label(p, 12, "All online time counts, including idle and out-of-combat time."):SetPoint("TOPLEFT", 16, -324)
-    label(p, 12, "Restarting XP periods preserves time per level and completed levels."):SetPoint("TOPLEFT", 16, -348)
+    label(p, 12, "Restarting the session preserves time per level and completed levels."):SetPoint("TOPLEFT", 16, -348)
     p:SetScript("OnShow", function()
         p.visible:SetChecked(not A.db.hidden); p.locked:SetChecked(A.db.locked)
         p.expanded:SetChecked(A.db.levelExpanded)
@@ -100,7 +105,7 @@ function U.CreateLevels()
     end)
     U.levelToggle:SetScript("OnLeave", function() GameTooltip:Hide() end)
     local p = CreateFrame("Frame", nil, U.panel)
-    U.levelPanel = p; p:SetSize(EXPANDED_WIDTH, 204); p:SetPoint("TOPLEFT", 0, -255)
+    U.levelPanel = p; p:SetSize(EXPANDED_WIDTH, 204); p:SetPoint("TOPLEFT", 0, -HEIGHT - 5)
     local divider = p:CreateTexture(nil, "ARTWORK")
     divider:SetColorTexture(.68, .52, .18, .35); divider:SetPoint("TOPLEFT", 10, 0); divider:SetSize(EXPANDED_WIDTH - 20, 1)
     label(p, 10, "Level"):SetPoint("TOPLEFT", 10, -10)
@@ -138,7 +143,7 @@ function U.RefreshLevels()
     if U.levelExpanded ~= expanded then
         if U.levelExpanded ~= nil or expanded then
             local left, top = U.panel:GetLeft(), U.panel:GetTop()
-            U.panel:SetSize(expanded and EXPANDED_WIDTH or WIDTH, expanded and 465 or HEIGHT)
+            U.panel:SetSize(expanded and EXPANDED_WIDTH or WIDTH, expanded and (HEIGHT + 215) or HEIGHT)
             if left and top then
                 U.panel:ClearAllPoints(); U.panel:SetPoint("TOPLEFT", UIParent, "TOPLEFT", left - UIParent:GetLeft(), top - UIParent:GetTop())
             end
@@ -178,11 +183,10 @@ function U.Create()
     end)
     U.anchor:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP"); GameTooltip:SetText("ElmoLeveling")
-        GameTooltip:AddLine("Actual XP earned in fixed 1-hour and 24-hour periods from Start.", 1, 1, 1, true)
-        GameTooltip:AddLine("The large value shows the last completed period, or the first period's actual XP while it is in progress.", .8, .8, .8, true)
-        GameTooltip:AddLine("No averages, medians or projected hourly rates. All XP sources count.", .8, .8, .8, true)
+        GameTooltip:AddLine("Time and XP show actual online time and XP earned since Start/reset.", 1, 1, 1, true)
+        GameTooltip:AddLine("All XP sources count. The total does not reset at an hour or day boundary.", .8, .8, .8, true)
         GameTooltip:AddLine("Idle and out-of-combat online time count. Offline time does not.", .8, .8, .8, true)
-        GameTooltip:AddLine("Periods resume after reload/login. Restart begins both periods again without clearing level times.", .8, .8, .8, true)
+        GameTooltip:AddLine("The session resumes after reload/login. Restart clears time and XP without clearing level times.", .8, .8, .8, true)
         GameTooltip:AddLine("Bags show vendor sell value. Purple borders retain the class/role upgrade rules.", .8, .8, .8, true)
         GameTooltip:AddLine(A.db.locked and "Click Unlock to move this panel." or "Drag the title to move this panel.", 1, .82, 0, true)
         GameTooltip:Show()
@@ -190,21 +194,20 @@ function U.Create()
     U.anchor:SetScript("OnLeave", function() GameTooltip:Hide() end)
     local title = label(U.anchor, 13, "ElmoLeveling"); title:SetPoint("TOPLEFT", 9, -3); title:SetTextColor(1, .82, 0)
     U.character = label(U.anchor, 14, ""); U.character:SetPoint("TOPLEFT", 9, -20); U.character:SetWidth(200); U.character:SetWordWrap(false)
-    for _, entry in ipairs({{"hour", -51}, {"day", -105}}) do
-        local name, y = entry[1], entry[2]
-        U[name .. "Caption"] = label(f, 11, ""); U[name .. "Caption"]:SetPoint("TOPLEFT", 10, y)
-        U[name] = label(f, 18, "0"); U[name]:SetPoint("TOPRIGHT", -10, y + 3); U[name]:SetWidth(150); U[name]:SetJustifyH("RIGHT")
-        U[name .. "Progress"] = label(f, 10, ""); U[name .. "Progress"]:SetPoint("TOPLEFT", 10, y - 22); U[name .. "Progress"]:SetWidth(WIDTH - 20)
-        U[name .. "Progress"]:SetTextColor(.7, .7, .7)
-    end
-    U.time = label(f, 11, ""); U.time:SetPoint("TOPLEFT", 10, -157); U.time:SetWidth(WIDTH - 20)
+    U.sessionStrip = panel("Frame", nil, f)
+    U.sessionStrip:SetPoint("TOPLEFT", 10, -48); U.sessionStrip:SetPoint("TOPRIGHT", -10, -48)
+    U.sessionStrip:SetHeight(34); U.sessionStrip:SetBackdropColor(.055, .045, .065, .9)
+    U.sessionStrip:SetBackdropBorderColor(.34, .28, .14, .75); U.sessionStrip:EnableMouse(false)
+    U.summary = label(U.sessionStrip, 13, "")
+    U.summary:SetPoint("TOPLEFT", 8, 0); U.summary:SetPoint("BOTTOMRIGHT", -8, 0)
+    U.summary:SetJustifyH("CENTER"); U.summary:SetWordWrap(false)
     local divider = f:CreateTexture(nil, "ARTWORK")
-    divider:SetColorTexture(.68, .52, .18, .35); divider:SetPoint("TOPLEFT", 10, -180); divider:SetSize(WIDTH - 20, 1)
-    label(f, 11, "Bags (sell value):"):SetPoint("TOPLEFT", 10, -193)
-    U.bagValue = label(f, 15, "Loading..."); U.bagValue:SetPoint("TOPRIGHT", -10, -189); U.bagValue:SetWidth(186); U.bagValue:SetJustifyH("RIGHT")
-    U.bagStatus = label(f, 9, ""); U.bagStatus:SetPoint("TOPLEFT", 10, -230); U.bagStatus:SetWidth(158)
-    U.lock = button(f, "Lock", -88, -222, 69, function() A.SetLocked(not A.db.locked) end)
-    U.reset = button(f, "Restart", -12, -222, 69, A.Reset)
+    divider:SetColorTexture(.68, .52, .18, .35); divider:SetPoint("TOPLEFT", 10, -94); divider:SetSize(WIDTH - 20, 1)
+    label(f, 11, "Bags (sell value):"):SetPoint("TOPLEFT", 10, -107)
+    U.bagValue = label(f, 15, "Loading..."); U.bagValue:SetPoint("TOPRIGHT", -10, -103); U.bagValue:SetWidth(186); U.bagValue:SetJustifyH("RIGHT")
+    U.bagStatus = label(f, 9, ""); U.bagStatus:SetPoint("TOPLEFT", 10, -144); U.bagStatus:SetWidth(158)
+    U.lock = button(f, "Lock", -88, -136, 69, function() A.SetLocked(not A.db.locked) end)
+    U.reset = button(f, "Restart", -12, -136, 69, A.Reset)
     U.CreateLevels()
 end
 function U.Update()
@@ -212,13 +215,8 @@ function U.Update()
     local level = UnitLevel("player")
     U.character:SetText((A.Text(UnitName("player")) or "Player") .. " lv. " .. math.max(A.IsNumber(level) and level or 0, A.expectedLevel or 0))
     local stats = A.Stats()
-    for _, name in ipairs({"hour", "day"}) do
-        local value, duration = stats[name], name == "hour" and "1h" or "24h"
-        U[name .. "Caption"]:SetText("XP · " .. (value.completed and "last full " or "first ") .. duration)
-        U[name]:SetText(A.db.xpGap and "--" or U.Number(value.xp))
-        U[name .. "Progress"]:SetText((value.completed and ("Current: " .. U.Number(value.currentXP) .. " XP · ") or "In progress · ") .. U.SessionTime(value.elapsed) .. " / " .. duration)
-    end
-    U.time:SetText(A.db.xpGap and "Skipped XP data · Restart periods." or ("Since Start: " .. U.SessionTime(stats.elapsed)))
+    U.summary:SetText("|cffaaa59bTime|r |cffffd100" .. U.Clock(stats.elapsed) ..
+        "|r  |cff806b3c·|r  |cffaaa59bXP|r |cffb77aff" .. (A.db.xpGap and "--" or ("+" .. U.Number(stats.totalXP))) .. "|r")
     local bags = A.Bags.state
     if bags then
         U.bagValue:SetText((bags.pending > 0 and ">= " or "") .. U.Money(bags.value))

@@ -1,3 +1,16 @@
+# 2.0.1
+
+Replaced the 1-hour and 24-hour XP counters with one compact session line:
+Time HH:MM:SS · XP +earned. Gold time and purple XP sit inside a subtle bronze
+inset panel. Days appear for sessions of 24 hours or longer. Reduced collapsed
+panel height while preserving the expandable level-history panel.
+
+The session counts all online idle/out-of-combat time, resumes after reload/login
+and continues across hour/day boundaries. Restart resets time and XP together,
+without clearing level timing or its history. Equipment upgrade rules and bag
+values are unchanged. Removed the retired period counters from runtime and
+saved data.
+
 # 2.0.0
 
 Rebuilt the dashboard around actual XP earned in fixed one-hour and 24-hour
