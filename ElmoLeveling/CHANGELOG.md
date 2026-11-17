@@ -1,3 +1,32 @@
+# 2.2.3
+
+Always include days in the header Time value using `Dgg HH:MM:SS`, for example
+`1gg 21:27:33`. Before one full day it shows `0gg`. Retain two-digit hours,
+minutes and seconds and the existing clock width fitting. Elapsed session time
+and level-history duration formatting are unchanged.
+
+# 2.2.2
+
+Ignore applied enchantments when scoring both bag candidates and equipped
+replacements. Read native item stats and supplemental tooltip bonuses from a
+comparison link with only its enchant ID cleared. Preserve random suffixes,
+gems, bonus IDs and other variant fields, plus the original equipment/bag links
+and cache identities. Missing unenchanted data remains pending rather than
+falling back to enchanted scores. Class/spec weights are unchanged.
+
+# 2.2.1
+
+Fixed an unconfirmed level-up when the XP requirement changes or temporarily
+returns zero. A character at level 43 could otherwise be cached as level 44,
+leaving the seal empty and XP unavailable indefinitely. The displayed level
+now comes from UnitLevel, independently of the session accumulator.
+
+Wait for the native level before accounting for XP rollover. Preserve its
+previous XP baseline so a delayed level update is counted once. On startup,
+discard only impossible future history entries left by earlier inferred
+transitions; retain completed history, elapsed session time and gold counters.
+The native played-time reply restores current-level timing as before.
+
 # 2.2.0
 
 Added two separate gold counters to the compact Sigillo panel. In bags shows

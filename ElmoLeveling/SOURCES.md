@@ -10,6 +10,11 @@ Actual XP comes from public UnitXP, UnitXPMax and UnitLevel snapshots plus
 PLAYER_XP_UPDATE and PLAYER_LEVEL_UP. Elapsed time uses GetTime and saved online
 seconds, including idle time. Multiple unobserved level transitions remain
 unknown; no award, rate or historical level duration is invented.
+UnitXPMax changes are not level-up evidence: accounting waits for UnitLevel,
+while PLAYER_LEVEL_UP can start the level timer before the XP snapshot settles.
+The seal reads UnitLevel directly and cannot be held above it by a stale
+session baseline. Startup drops only history transitions beyond the observed
+current level, repairing future entries inferred by versions through 2.2.0.
 
 RequestTimePlayed and TIME_PLAYED_MSG can recover the current level's played
 time. Earlier completed levels cannot be recovered this way. The request uses
@@ -106,6 +111,16 @@ counter. Sales made before tracking started are not inferred from a balance.
 ## Equipment upgrades and verification
 
 UPGRADE_RULES.md describes the unchanged class/role formulas in Upgrades.lua.
+Since 2.2.2, candidate and replacement stats exclude applied enchantments. The
+item hyperlink's enchant-ID field is cleared for both C_Item.GetItemStats and
+the native/legacy hyperlink tooltip reader. Other fields, including random
+suffixes, remain intact; metadata, original links and cache identities remain
+unchanged. Unavailable unenchanted data follows the normal item-load retry.
+The [native item-stat API](https://github.com/Gethe/wow-ui-source/blob/forever/Interface/AddOns/Blizzard_APIDocumentationGenerated/ItemDocumentation.lua)
+accepts the comparison hyperlink. The field layout is also described in
+[Pawn's own hyperlink handling](https://github.com/VgerMods/Pawn/blob/master/Pawn.lua);
+no Pawn code or assets are bundled. ElmoLeveling clears only the enchant field
+and retains gem fields.
 Native bags and BetterBags hooks remain independent of tracker visibility.
 Price times stack quantity determines carried vendor value; unavailable item
 data stays pending until the public item cache supplies it.

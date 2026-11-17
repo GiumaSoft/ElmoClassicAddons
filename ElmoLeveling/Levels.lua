@@ -22,6 +22,11 @@ end
 
 function L.Start(level)
     if not A.IsNumber(level) or level < 1 then return end
+    -- Earlier versions inferred level-ups from XP requirements. Remove only
+    -- impossible future transitions; retain all history already reached.
+    for i = #A.db.levels, 1, -1 do
+        if A.db.levels[i].to > level then table.remove(A.db.levels, i) end
+    end
     local state = A.db.levelState
     if not state or state.level ~= level then
         state = {level = level, seconds = 0, complete = false}

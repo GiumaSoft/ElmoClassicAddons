@@ -23,6 +23,13 @@ only by the terms above; they are not added as primary stats a second time.
 An empty equipment slot has score zero. Equal scores do not get a purple border.
 For a two-handed candidate, the replaced score is main-hand plus off-hand.
 
+Applied enchantments contribute **zero** on both the candidate and the equipped
+replacement. Native stats and supplemental tooltip bonuses are read from a
+comparison link with only its enchant-ID field set to zero. Random suffixes
+(such as "of the Eagle"), gems, bonus IDs and all other variant fields are
+preserved. Original bag/equipment links remain unchanged. This rule applies to
+every class/profile, armor slot and weapon comparison.
+
 ## Profile selection by class and specialization
 
 The branch with the most allocated talent points selects the specialization.
@@ -126,7 +133,8 @@ level-dependent conversion of rating to percentage.
   from that check.
 - Missing candidate or equipped-item data waits for loading. A required weapon
   DPS value must be loaded before comparison; unknown equipment is never treated
-  as an empty, zero-score slot.
+  as an empty, zero-score slot. Missing data for the unenchanted comparison link
+  also waits; the enchanted stats are never substituted.
 - Native aliases for one stat use their maximum value, not their sum. Recognized
   flat English tooltip bonuses are summed within the tooltip, then merged with
   the native stat using `max(native, tooltip)`, preventing double counting.

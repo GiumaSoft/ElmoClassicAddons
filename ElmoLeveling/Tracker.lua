@@ -1,6 +1,6 @@
 local _, A = ...
 _G.ElmoLeveling = A
-A.version = "2.2.0"
+A.version = "2.2.3"
 local number = A.IsNumber
 
 local function progress()
@@ -52,19 +52,27 @@ function A.Sample()
     local current = progress()
     if not current then return end
     local previous = A.last
-    if not previous then A.last = current; return end
-    local level = math.max(previous.level, current.level)
-    if current.maximum == previous.maximum then
-        if level > previous.level or (A.expectedLevel or 0) > previous.level then return end
+    if not previous then
+        A.last = current
+        if not A.Levels.started then A.Levels.Start(current.level) end
+        return
+    end
+    local level = current.level
+    if level < previous.level then return end
+    if level == previous.level then
+        if (A.expectedLevel or 0) > level then return end
+        -- Requirements can change or briefly disappear without a level-up.
+        -- Keep the old baseline while a possible rollover is still unconfirmed.
+        if current.maximum == 0 and previous.maximum > 0 then return end
         if current.xp < previous.xp then return end
-    elseif previous.maximum > 0 then
-        level = math.max(level, previous.level + 1)
+    elseif current.maximum == previous.maximum and current.xp >= previous.xp and previous.maximum > 0 then
+        return
     end
     if level > previous.level + 1 then
         -- The intervening XP requirements were not observed. Do not invent an award.
         A.db.xpGap = true
         A.Levels.Advance(level)
-        current.level, A.last = level, current
+        A.last = current
         return
     end
     local gained = current.xp - previous.xp
@@ -72,7 +80,7 @@ function A.Sample()
     if gained < 0 then return end
     A.db.xp = A.db.xp + gained
     A.Levels.Advance(level)
-    current.level, A.last = level, current
+    A.last = current
     if level >= (A.expectedLevel or 0) then A.expectedLevel = nil end
 end
 

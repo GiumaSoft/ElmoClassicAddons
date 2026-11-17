@@ -4,7 +4,7 @@ One source project for the locally maintained Elmo addon family. Interface and m
 
 | Addon | Release | Clients |
 | --- | --- | --- |
-| ElmoLeveling | 2.2.0 | Classic Era 11509, Forever 16001 |
+| ElmoLeveling | 2.2.3 | Classic Era 11509, Forever 16001 |
 | ElmoPlater | 2.4.1 | Classic Era 11509, Forever 16001 |
 | ElmoSpellTracker | 1.0.4 | Classic Era 11509, Forever 16001 |
 | ElmoQuestEnhanced | 1.2.1 | Classic Era 11509, Forever 16001 |
@@ -62,7 +62,7 @@ players once and optionally invites contacted players who reply inv. Open
 Right-clicking a player row requests a direct group invitation.
 Its independent Lua 5.1 checks are in `scripts/tests/ElmoLFM/test_addon.py`.
 
-ElmoLeveling 2.2.0 uses the Sigillo layout: a circular level/XP seal, current zone,
+ElmoLeveling 2.2.3 uses the Sigillo layout: a circular level/XP seal, current zone,
 rested XP and general-purpose free bag space. A header clock shows elapsed online
 time; remaining XP appears once below the subzone in a 15-point caption. The
 antialiased seal uses generated artwork and the native radial renderer when
@@ -74,6 +74,7 @@ is recorded in an expandable history. Idle time
 counts. Mob XP records, kill timing and respawn sampling are removed. Purple
 equipment upgrade borders retain their rules; class/specialization mappings,
 weights and comparison formulas are in `ElmoLeveling/UPGRADE_RULES.md`.
+Comparisons ignore applied enchants on both items while preserving random suffixes.
 
 ElmoWaypoint adds `/way x y [note]`, circular map/minimap pins with note tooltips,
 a movable directional arrow, a live coordinate frame and a minimap launcher.

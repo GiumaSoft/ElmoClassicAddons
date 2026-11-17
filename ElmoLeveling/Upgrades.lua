@@ -56,6 +56,10 @@ local slots = {
 
 local function api(name) return C_Item and C_Item[name] or _G[name] end
 local function itemID(link) return tonumber(link and link:match("item:(%d+)")) end
+local function unenchanted(link)
+    -- Clear only the applied enchant, retaining suffixes, bonuses and variants.
+    return (link:gsub("(item:%d+:)%d+", function(prefix) return prefix .. "0" end, 1))
+end
 local function request(link)
     local id = itemID(link)
     if not id then return end
@@ -137,8 +141,8 @@ local bonuses = {
     {"blockValue", "^Equip: Increases the block value of your shield by (%d+)%.$"},
 }
 
-local function tooltipStats(item)
-    local data = A.Compat.ItemTooltip(item.link)
+local function tooltipStats(item, link)
+    local data = A.Compat.ItemTooltip(link)
     local lines = type(data) == "table" and data.lines
     local dpsPattern, armorPattern = formatPattern(DPS_TEMPLATE), formatPattern(ARMOR_TEMPLATE)
     local bonus, primary = {}, {}
@@ -178,13 +182,14 @@ function U.Read(link)
     local item = {link = link, id = itemID(link), required = required or 0, equipLoc = equipLoc,
         classID = classID, subclassID = subclassID, stats = {}}
     if slots[equipLoc] then
+        local statLink = unenchanted(link)
         local getStats = api("GetItemStats")
-        local raw = getStats and getStats(link)
+        local raw = getStats and getStats(statLink)
         for key, value in pairs(raw or {}) do
             local stat = keys[key]
             if stat and A.IsNumber(value) then item.stats[stat] = math.max(item.stats[stat] or 0, value) end
         end
-        local tooltipLoaded = tooltipStats(item)
+        local tooltipLoaded = tooltipStats(item, statLink)
         if not raw and not tooltipLoaded then request(link); return end
         -- A weapon whose DPS has not loaded must not become a zero-score
         -- equipped baseline, nor may a better-stat candidate hide lost DPS.

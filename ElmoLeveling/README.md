@@ -1,4 +1,4 @@
-# ElmoLeveling 2.2.0
+# ElmoLeveling 2.2.3
 
 The **Sigillo** leveling tracker for **Classic Era 1.15.9** and **WoW Forever
 1.60.1**: a compact aristocratic layout, live location and level progress,
@@ -36,7 +36,7 @@ unlocked to move the tracker; the saved position is retained across reload/login
 The header shows elapsed time, for example:
 
 ```text
-Time 02:01:38
+Time 1gg 21:27:33
 ```
 
 Below the subzone, the violet count is the XP required for the next level,
@@ -45,7 +45,8 @@ bar (`UnitXPMax - UnitXP`); it is not a session total or a rate. There is no
 second XP counter or central statistics row. The larger subzone font and
 single remaining-XP line keep the location readable.
 
-After 24 hours the clock includes days, for example `1d 03:12:09`. There are no
+The clock always includes days as `Dgg HH:MM:SS`, including `0gg` before the
+first full day. Hours, minutes and seconds use two digits. There are no
 hourly/day counters or projections. **Restart**, `/elvl start` or `/elvl reset`
 restarts the session timer. All online time counts, including idle, travel, city, AFK and
 out-of-combat time. Offline time does not count. The session resumes after
@@ -56,6 +57,10 @@ awards reduce the remaining count as the player's XP bar changes; after a level
 up, the new level's requirement is displayed. If current XP is unavailable,
 the line says **XP unavailable**. Missing historical awards do not prevent a
 readable current-level remaining count. Existing saved profiles are preserved.
+The displayed level comes directly from the character's native level. A changed
+or temporarily unavailable XP requirement cannot advance it. Startup removes
+only impossible future level-history entries created by older inferred
+transitions; completed levels and the existing session/gold counters remain.
 
 ## Gold counters
 
@@ -115,7 +120,9 @@ and the installed BetterBags edition, even when the dashboard is hidden.
 It compares currently usable items against equipped replacements using relative
 class/role leveling weights. Gear is never equipped automatically.
 
-The complete, unchanged rules are in [Equipment upgrade formulas](UPGRADE_RULES.md):
+Applied enchantments are ignored on both candidates and equipped replacements.
+Random suffixes and the item's own stats still count. Class/spec weights are unchanged.
+The complete rules are in [Equipment upgrade formulas](UPGRADE_RULES.md):
 
 - The exact weighted score and strict improvement threshold.
 - Class, specialization, no-talent defaults and group-role precedence.

@@ -380,6 +380,61 @@ class LevelingTests(unittest.TestCase):
         MOCK.equipped[5]='item:10'; MOCK.start(); assert(A.Upgrades.Evaluate('item:20').upgrade)""")
 
 
+    def test_equipped_enchant_does_not_hide_a_base_stat_upgrade(self):
+        self.check("""local clean='item:10:0:0:0:0:0:-12:909:43:0:0:0'
+        local enchanted='item:10:2564:0:0:0:0:-12:909:43:0:0:0'
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5},{link=clean,tooltip={'+5 Agility'}})
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=30},{link=enchanted,tooltip={'+5 Agility','+25 Agility'}})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=6})
+        MOCK.equipped[5]=enchanted;MOCK.put(0,1,20,1);MOCK.start()
+        local _,buttons=MOCK.nativeBag(0,1)
+        assert(buttons[1].ElmoLevelingUpgrade and A.Upgrades.Read(enchanted).stats.agi==5)
+        assert(MOCK.equipped[5]==enchanted)""")
+
+    def test_candidate_enchant_does_not_create_a_false_upgrade(self):
+        self.check("""local clean='|cff1eff00|Hitem:20:0:0:0:0:0:0:909:43:0:0:0|h[Enchanted vest]|h|r'
+        local enchanted='|cff1eff00|Hitem:20:2564:0:0:0:0:0:909:43:0:0:0|h[Enchanted vest]|h|r'
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=4},{link=clean,tooltip={'+4 Agility'}})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=29},{link=enchanted,tooltip={'+4 Agility','+25 Agility'}})
+        MOCK.equipped[5]='item:10';MOCK.put(0,1,20,1,{hyperlink=enchanted});MOCK.start()
+        local _,buttons=MOCK.nativeBag(0,1)
+        assert(not buttons[1].ElmoLevelingUpgrade and not A.Upgrades.Evaluate(enchanted).upgrade)
+        assert(A.Upgrades.Read(enchanted).stats.agi==4 and MOCK.bags[0][1].hyperlink==enchanted)""")
+
+    def test_ignoring_enchants_preserves_random_suffix_and_remaining_link_fields(self):
+        self.check("""local eagle='item:10:0:11:22:33:44:-12:909:43:0:0:0:2:120:121'
+        local owl='item:10:0:11:22:33:44:-13:909:43:0:0:0:2:120:121'
+        local enchantedEagle='item:10:2564:11:22:33:44:-12:909:43:0:0:0:2:120:121'
+        local enchantedOwl='item:10:2564:11:22:33:44:-13:909:43:0:0:0:2:120:121'
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5},{link=eagle})
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_INTELLECT_SHORT=5},{link=owl})
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=30},{link=enchantedEagle})
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=25,ITEM_MOD_INTELLECT_SHORT=5},{link=enchantedOwl})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=4});MOCK.equipped[5]='item:20';MOCK.start()
+        assert(A.Upgrades.Evaluate(enchantedEagle).upgrade)
+        assert(not A.Upgrades.Evaluate(enchantedOwl).upgrade)
+        assert(A.Upgrades.Read(enchantedEagle).stats.agi==5 and A.Upgrades.Read(enchantedOwl).stats.int==5)""")
+
+    def test_unloaded_unenchanted_stats_wait_instead_of_using_enchanted_values(self):
+        self.check("""local clean=MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5},
+            {link='item:10:0:0:0',statsCold=true,tooltipCold=true})
+        MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=30},{link='item:10:2564:0:0'})
+        MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=6})
+        MOCK.equipped[5]='item:10:2564:0:0';MOCK.put(0,1,20,1);MOCK.start()
+        local _,buttons=MOCK.nativeBag(0,1);assert(not buttons[1].ElmoLevelingUpgrade)
+        assert(A.Upgrades.pending[10] and MOCK.requests[10]==1)
+        clean.statsCold,clean.tooltipCold=nil,nil;MOCK.event('GET_ITEM_INFO_RECEIVED',10,true);MOCK.advance(1)
+        assert(buttons[1].ElmoLevelingUpgrade)""")
+
+    def test_weapon_comparison_ignores_enchanted_tooltip_damage(self):
+        self.check("""MOCK.class='WARRIOR'
+        MOCK.gear(10,'INVTYPE_2HWEAPON',{}, {link='item:10:0',dps=5})
+        MOCK.gear(10,'INVTYPE_2HWEAPON',{}, {link='item:10:2504',dps=20})
+        MOCK.gear(20,'INVTYPE_2HWEAPON',{}, {dps=6});MOCK.equipped[16]='item:10:2504';MOCK.start()
+        assert(A.Upgrades.Evaluate('item:20').upgrade and A.Upgrades.Read('item:10:2504').stats.dps==5)""")
+
+
     def test_cold_equipped_item_prevents_false_upgrade_then_item_load_rechecks(self):
         self.check("""local current=MOCK.gear(10,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=10},{cold=true})
         MOCK.gear(20,'INVTYPE_CHEST',{ITEM_MOD_AGILITY_SHORT=5})
@@ -577,6 +632,17 @@ class LevelingTests(unittest.TestCase):
         MOCK.dualWield=true; MOCK.event('SPELLS_CHANGED'); assert(A.Upgrades.Evaluate('item:30').upgrade)
         assert(A.Compat.tooltip == nil, 'Native C_TooltipInfo should not need a hidden GameTooltip')""")
 
+    def test_forever_native_tooltip_supplement_excludes_enchants_on_both_items(self):
+        self.check("""MOCK.class='PRIEST';MOCK.talents={0,0,10}
+        MOCK.gear(10,'INVTYPE_CHEST',{}, {link='item:10:0:0',tooltip={'+5 Intellect'}})
+        MOCK.gear(10,'INVTYPE_CHEST',{}, {link='item:10:1891:0',tooltip={'+5 Intellect','+4 Intellect'}})
+        MOCK.gear(20,'INVTYPE_CHEST',{}, {link='item:20:0:0',tooltip={'+6 Intellect'}})
+        MOCK.gear(20,'INVTYPE_CHEST',{}, {link='item:20:1891:0',tooltip={'+6 Intellect','+4 Intellect'}})
+        MOCK.equipped[5]='item:10:1891:0';MOCK.start()
+        assert(A.Upgrades.Evaluate('item:20:1891:0').upgrade)
+        assert(A.Upgrades.Read('item:10:1891:0').stats.int==5 and A.Upgrades.Read('item:20:1891:0').stats.int==6)
+        assert(A.Compat.tooltip==nil)""")
+
 
     def test_forever_trait_ranks_choose_role_and_refresh_after_config_update(self):
         self.check("""MOCK.forever(); MOCK.class='PALADIN'; MOCK.traits({0,0,10}); MOCK.start()
@@ -600,7 +666,7 @@ class LevelingTests(unittest.TestCase):
     def test_single_line_shows_actual_time_and_tnl_including_idle(self):
         self.check("""MOCK.start();MOCK.advance(60);MOCK.gain(100)
         local s=A.Stats();assert(s.totalXP==100 and s.elapsed==60)
-        assert(A.UI.timeValue:GetText()=='00:01:00' and MOCK.plain(A.UI.nextLevel:GetText())=='200 XP to level 2')
+        assert(A.UI.timeValue:GetText()=='0gg 00:01:00' and MOCK.plain(A.UI.nextLevel:GetText())=='200 XP to level 2')
         MOCK.advance(1800);s=A.Stats();assert(s.totalXP==100 and s.elapsed==1860)
         assert(A.UI.hour==nil and A.UI.day==nil and A.UI.averageHour==nil and A.Mobs==nil)
         assert(A.UI.panel.height==218 and A.db.periods==nil)""")
@@ -609,16 +675,16 @@ class LevelingTests(unittest.TestCase):
         self.check("""MOCK.start();MOCK.gain(75);MOCK.advance(3600);MOCK.gain(25)
         local s=A.Stats();assert(s.totalXP==100 and s.elapsed==3600)
         MOCK.advance(86400);s=A.Stats();assert(s.totalXP==100 and s.elapsed==90000)
-        assert(A.UI.timeValue:GetText()=='1d 01:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='200 XP to level 2')
+        assert(A.UI.timeValue:GetText()=='1gg 01:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='200 XP to level 2')
         MOCK.gain(40);assert(A.Stats().totalXP==140 and A.TickPeriods==nil)""")
 
     def test_existing_session_totals_and_explicit_start_are_preserved(self):
         self.check("""ElmoLevelingDB={xp=12450,seconds=3600,measurementAt=1200,
             periods={hour={xp=20,start=3500}}}
         MOCK.start();local s=A.Stats();assert(s.totalXP==12450 and s.elapsed==2400)
-        assert(A.db.periods==nil and A.UI.timeValue:GetText()=='00:40:00' and MOCK.plain(A.UI.nextLevel:GetText())=='300 XP to level 2')
+        assert(A.db.periods==nil and A.UI.timeValue:GetText()=='0gg 00:40:00' and MOCK.plain(A.UI.nextLevel:GetText())=='300 XP to level 2')
         A.Command('start');assert(A.Stats().totalXP==0 and A.Stats().elapsed==0)
-        assert(A.UI.timeValue:GetText()=='00:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='300 XP to level 2')""")
+        assert(A.UI.timeValue:GetText()=='0gg 00:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='300 XP to level 2')""")
 
     def test_restart_preserves_current_level_clock_and_completed_history(self):
         self.check("""MOCK.start();MOCK.event('TIME_PLAYED_MSG',5000,1000);MOCK.advance(10)
@@ -692,9 +758,57 @@ class LevelingTests(unittest.TestCase):
 
     def test_xp_bar_can_settle_before_native_level_without_double_counting(self):
         self.check("""MOCK.start();MOCK.xp,MOCK.maximum=20,900
-        MOCK.event('PLAYER_XP_UPDATE','player');assert(A.db.xp==320 and #A.db.levels==1)
+        MOCK.event('PLAYER_XP_UPDATE','player');assert(A.db.xp==0 and #A.db.levels==0 and A.last.level==1)
         MOCK.event('PLAYER_LEVEL_UP',2);MOCK.level=2;MOCK.advance(1)
         assert(A.db.xp==320 and #A.db.levels==1)""")
+
+    def test_temporary_zero_xp_requirement_cannot_promote_level_43_or_hide_recovered_xp(self):
+        self.check("""MOCK.level,MOCK.xp,MOCK.maximum=43,12000,80000;MOCK.start()
+        MOCK.advance(60);MOCK.xp,MOCK.maximum=0,0;MOCK.event('PLAYER_XP_UPDATE','player')
+        assert(A.last.level==43 and A.db.levelState.level==43 and #A.db.levels==0)
+        assert(A.UI.level:GetText()=='43' and A.UI.ProgressText()=='XP unavailable')
+        MOCK.xp,MOCK.maximum=12500,80000;MOCK.event('PLAYER_XP_UPDATE','player')
+        assert(A.db.xp==500 and A.UI.level:GetText()=='43' and A.UI.percent:GetText()=='15%')
+        assert(A.UI.ProgressText()=='67,500 XP to level 44' and A.SinceStart()==60)""")
+
+    def test_same_level_requirement_change_does_not_invent_an_award_or_history(self):
+        self.check("""MOCK.level,MOCK.xp,MOCK.maximum=43,12000,80000;MOCK.start()
+        MOCK.maximum=85000;MOCK.event('PLAYER_XP_UPDATE','player')
+        assert(A.db.xp==0 and A.last.level==43 and #A.db.levels==0)
+        assert(A.UI.ProgressText()=='73,000 XP to level 44')
+        MOCK.gain(250);assert(A.db.xp==250 and A.UI.level:GetText()=='43')""")
+
+    def test_stale_tracker_level_cannot_override_native_level_or_block_current_progress(self):
+        self.check("""MOCK.level,MOCK.xp,MOCK.maximum=43,12000,80000;MOCK.start()
+        A.last.level=44;A.UI.Update()
+        assert(A.UI.level:GetText()=='43' and A.UI.ProgressText()=='68,000 XP to level 44')
+        assert(A.UI.percent:GetText()=='15%')""")
+
+    def test_native_level_can_settle_before_xp_without_awarding_stale_snapshot(self):
+        self.check("""MOCK.start();MOCK.level=2;MOCK.event('PLAYER_LEVEL_UP',2);MOCK.advance(1)
+        assert(A.db.xp==0 and A.last.level==1 and #A.db.levels==1)
+        MOCK.xp,MOCK.maximum=20,900;MOCK.event('PLAYER_XP_UPDATE','player')
+        MOCK.advance(1);assert(A.db.xp==320 and A.last.level==2 and #A.db.levels==1)
+        assert(A.UI.ProgressText()=='880 XP to level 3')""")
+
+    def test_confirmed_rollover_can_keep_the_same_xp_requirement(self):
+        self.check("""MOCK.start();MOCK.level,MOCK.xp=2,20
+        MOCK.event('PLAYER_LEVEL_UP',2);MOCK.event('PLAYER_XP_UPDATE','player');MOCK.advance(1)
+        assert(A.db.xp==320 and A.last.level==2 and #A.db.levels==1)
+        assert(A.UI.ProgressText()=='380 XP to level 3')""")
+
+    def test_reload_discards_only_impossible_future_level_history_and_keeps_session(self):
+        self.check("""MOCK.level,MOCK.xp,MOCK.maximum=43,12000,80000
+        ElmoLevelingDB={xp=899371,seconds=83790,measurementAt=59019,vendorSales=52699,
+            levelState={level=44,seconds=100,complete=true},levels={
+                {from=43,to=44,seconds=6097,complete=true},
+                {from=42,to=43,seconds=20686,complete=true}}}
+        MOCK.start();assert(A.db.levelState.level==43 and #A.db.levels==1)
+        assert(A.db.levels[1].from==42 and A.db.levels[1].seconds==20686)
+        assert(A.db.xp==899371 and A.SinceStart()==24771 and A.db.vendorSales==52699)
+        assert(A.UI.level:GetText()=='43' and A.UI.ProgressText()=='68,000 XP to level 44')
+        MOCK.event('TIME_PLAYED_MSG',100000,7084)
+        assert(A.Levels.CurrentSeconds()==7084 and A.db.levelState.complete)""")
 
     def test_final_level_and_max_level_display(self):
         self.check("""MOCK.level,MOCK.xp,MOCK.maximum=59,209700,209800;MOCK.start()
@@ -793,6 +907,7 @@ class LevelingTests(unittest.TestCase):
         self.check("""MOCK.level=nil;MOCK.start()
         assert(A.UI.level:GetText()=='?' and A.UI.ProgressText()=='XP unavailable')
         MOCK.level,MOCK.xp,MOCK.maximum=1,399,400;MOCK.event('PLAYER_XP_UPDATE','player')
+        assert(A.db.levelState.level==1 and MOCK.playedRequests==1)
         assert(A.UI.percent:GetText()=='99%' and A.UI.ProgressText()=='1 XP to level 2')""")
 
     def test_full_weighted_score_examples_and_threshold(self):
@@ -806,12 +921,12 @@ class LevelingTests(unittest.TestCase):
 
     def test_tnl_is_actual_remaining_xp_and_restart_does_not_reset_it(self):
         self.check("""MOCK.level,MOCK.maximum,MOCK.xp=42,700000,87550;MOCK.start();MOCK.advance(7298)
-        assert(A.UI.timeValue:GetText()=='02:01:38' and MOCK.plain(A.UI.nextLevel:GetText())=='612,450 XP to level 43')
+        assert(A.UI.timeValue:GetText()=='0gg 02:01:38' and MOCK.plain(A.UI.nextLevel:GetText())=='612,450 XP to level 43')
         assert(A.UI.timeLabel:GetText()=='Time' and A.UI.tnlValue==nil and A.UI.summary==nil)
         assert(A.UI.subzone.fontSize==14 and A.UI.nextLevel.parent==A.UI.location)
         assert(A.UI.nextLevel.fontSize==15 and A.UI.percent.fontSize==13)
         MOCK.gain(50);assert(MOCK.plain(A.UI.nextLevel:GetText())=='612,400 XP to level 43')
-        A.Reset();assert(A.UI.timeValue:GetText()=='00:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='612,400 XP to level 43')
+        A.Reset();assert(A.UI.timeValue:GetText()=='0gg 00:00:00' and MOCK.plain(A.UI.nextLevel:GetText())=='612,400 XP to level 43')
         MOCK.xp=MOCK.maximum;A.UI.Update();assert(MOCK.plain(A.UI.nextLevel:GetText())=='0 XP to level 43')
         MOCK.level,MOCK.maximum,MOCK.xp=43,710000,10
         MOCK.event('PLAYER_LEVEL_UP',43);MOCK.event('PLAYER_XP_UPDATE','player')
@@ -820,7 +935,7 @@ class LevelingTests(unittest.TestCase):
     def test_refined_header_clock_fits_without_a_second_xp_row(self):
         self.check("""MOCK.level,MOCK.maximum,MOCK.xp=42,1000000000,12345
         MOCK.start();MOCK.advance(123*86400+7298)
-        assert(MOCK.plain(A.UI.nextLevel:GetText())=='999,987,655 XP to level 43' and A.UI.timeValue:GetText()=='123d 02:01:38')
+        assert(MOCK.plain(A.UI.nextLevel:GetText())=='999,987,655 XP to level 43' and A.UI.timeValue:GetText()=='123gg 02:01:38')
         assert(A.UI.timeValue:GetStringWidth()<=A.UI.timeValue.width)
         assert(A.UI.timeValue.width<=130 and A.UI.timeValue.parent==A.UI.clock)
         assert(A.UI.clock.parent==A.UI.panel and A.UI.summary==nil)

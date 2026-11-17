@@ -88,8 +88,8 @@ function U.SessionTime(seconds)
 end
 function U.Clock(seconds)
     seconds = math.floor(math.max(0, seconds))
-    local clock = string.format("%02d:%02d:%02d", math.floor(seconds / 3600) % 24, math.floor(seconds / 60) % 60, seconds % 60)
-    return (seconds >= 86400 and (math.floor(seconds / 86400) .. "d ") or "") .. clock
+    return string.format("%dgg %02d:%02d:%02d", math.floor(seconds / 86400),
+        math.floor(seconds / 3600) % 24, math.floor(seconds / 60) % 60, seconds % 60)
 end
 function U.Money(copper, signed)
     local prefix = signed and (copper > 0 and "+" or copper < 0 and "-" or "") or ""
@@ -228,10 +228,13 @@ end
 function U.ReadProgress()
     local actual = A.Call(UnitLevel, "player")
     actual = A.IsNumber(actual) and actual or 0
-    local result = {level = math.max(actual, A.expectedLevel or 0, A.last and A.last.level or 0)}
+    local result = {level = actual}
     local xp, maximum = A.Call(UnitXP, "player"), A.Call(UnitXPMax, "player")
-    if result.level < 1 or not A.IsNumber(maximum) or actual < result.level then return result end
-    if maximum == 0 then result.capped, result.fraction = true, 1; return result end
+    if actual < 1 or not A.IsNumber(maximum) or actual < (A.expectedLevel or 0) then return result end
+    if maximum == 0 then
+        if A.last and A.last.level == actual and A.last.maximum > 0 then return result end
+        result.capped, result.fraction = true, 1; return result
+    end
     if not A.IsNumber(xp) or xp > maximum then return result end
     result.fraction, result.remaining, result.maximum = xp / maximum, maximum - xp, maximum
     if type(GetXPExhaustion) == "function" then
