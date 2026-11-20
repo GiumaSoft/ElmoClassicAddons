@@ -1,6 +1,6 @@
 local _, A = ...
 _G.ElmoLeveling = A
-A.version = "2.2.3"
+A.version = "2.4.0"
 local number = A.IsNumber
 
 local function progress()
@@ -21,6 +21,11 @@ function A.Init()
     db.seconds = number(db.seconds) and db.seconds or 0
     db.locked, db.hidden = db.locked == true, db.hidden == true
     db.levelExpanded = db.levelExpanded == true
+    db.questMobMarks = db.questMobMarks ~= false
+    if db.questMobBeam == nil then db.questMobBeam = db.questMobMarks end
+    db.questCompass = db.questCompass ~= false
+    if db.questArrow == nil then db.questArrow = db.questCompass end
+    db.questBeam = db.questBeam ~= false
     db.xpGap = db.xpGap == true or nil
     db.bagBaseline = number(db.bagBaseline) and math.floor(db.bagBaseline) or nil
     if type(db.position) ~= "table" or type(db.position.x) ~= "number" or
@@ -123,8 +128,14 @@ function A.Command(text)
     elseif command == "center" then A.db.position = nil; A.SetVisible(true); A.UI.Place()
     elseif command == "options" then A.UI.OpenOptions()
     elseif command == "details" then A.UI.ToggleLevels()
+    elseif command == "questkills on" or command == "questkills off" then
+        local enabled = command == "questkills on"
+        A.db.questMobMarks, A.db.questMobBeam = enabled, enabled
+        A.QuestKills.Invalidate(); A.QuestMarkers.Update()
+        A.Print("Quest mob markers " .. (A.db.questMobMarks and "enabled." or "disabled."))
     else
         A.Print("/elvl: show/hide. /elvl start | reset: restart elapsed time and earned XP.")
         A.Print("/elvl lock | unlock | center | details | options. /elmoleveling is also available.")
+        A.Print("/elvl questkills on | off: quest mob badges and markers.")
     end
 end

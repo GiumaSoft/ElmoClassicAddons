@@ -1,11 +1,11 @@
 ## Interface: 16001
-## Title: ElmoWaypoint
-## Notes: /way coordinates, current-position waypoints, a movable coordinate display and navigation pins.
+## Title: ElmoWaypoint (Deprecated)
+## Notes: Waypoints moved to ElmoLeveling. Enable both once per character to import saved points.
 ## Author: Giuseppe
-## Version: 1.2.0
+## Version: 1.2.1
 ## IconTexture: Interface\Icons\INV_Misc_Map_01
 ## SavedVariablesPerCharacter: ElmoWaypointDB
-## OptionalDeps: TomTom
+## OptionalDeps: TomTom, ElmoLeveling
 
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua

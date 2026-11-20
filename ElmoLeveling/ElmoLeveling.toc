@@ -1,11 +1,18 @@
 ## Interface: 16001
 ## Title: ElmoLeveling
-## Notes: Sigillo leveling tracker: location, level progress, elapsed time, bag vendor value, session vendor sales and upgrades.
+## Notes: Sigillo leveling tracker, equipment upgrades, quest navigation and waypoints.
 ## Author: Giuseppe
-## Version: 2.2.3
+## Version: 2.4.0
 ## X-Curse-Project-ID: 1778256
 ## SavedVariablesPerCharacter: ElmoLevelingDB
-## OptionalDeps: BetterBags
+## OptionalDeps: BetterBags, ElmoPlater, TomTom
+
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\HereBeDragons\HereBeDragons-2.0.lua
+Libs\HereBeDragons\HereBeDragons-Pins-2.0.lua
 
 Client.lua
 Compat.lua
@@ -14,5 +21,13 @@ Tracker.lua
 Bags.lua
 Upgrades.lua
 Levels.lua
+QuestKills.lua
+QuestMarkers.lua
+QuestNavigation.lua
 UI.lua
+Waypoints\Core.lua
+Waypoints\Pins.lua
+Waypoints\Coordinates.lua
+Waypoints\Minimap.lua
+Waypoints\Settings.lua
 Core.lua

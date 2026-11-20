@@ -16,9 +16,6 @@ local function makeDisplay(parent)
     f.bar = CreateFrame("StatusBar", nil, f); f.bar:EnableMouse(false)
     f.bar:SetPoint("TOPLEFT", 1, -1); f.bar:SetPoint("BOTTOMRIGHT", -1, 1)
     f.bar:SetStatusBarTexture(WHITE)
-    f.questKill = f.bar:CreateTexture(nil, "OVERLAY")
-    f.questKill:SetSize(16, 16); f.questKill:SetPoint("RIGHT", f.bar, "LEFT", -4, 0)
-    f.questKill:Hide()
     f.percent = text(f.bar, 12); f.percent:SetPoint("CENTER")
     f.header = CreateFrame("Frame", nil, f); f.header:EnableMouse(false)
     f.header:SetPoint("BOTTOM", f, "TOP", 0, 3); f.header:SetHeight(14)
@@ -97,6 +94,28 @@ end
 
 function A.Clear()
     for unit in pairs(A.units) do A.Remove(unit) end
+end
+
+-- The first return is the health bar. The remaining values let overlays
+-- clear the top of the nameplate and the badge to its right.
+function A.GetHealthAnchor(unit, plate, guid)
+    local record = A.units[unit]
+    if record and record.plate == plate and record.guid == guid and record.frame:IsShown() then
+        local frame, container = record.frame, record.auraContainer
+        if container and container:IsShown() then
+            -- The container's top follows all rows, including in restricted combat.
+            local scale = A.Number(A.Call(container.GetScale, container)) or 1
+            return frame.bar, container, 14 * scale, frame.levelBadge
+        end
+        local clearance = 0
+        local lastIcon = frame.icons[#record.auras]
+        if lastIcon and lastIcon:IsShown() then
+            local iconTop = A.Number(A.Call(lastIcon.GetTop, lastIcon))
+            local nameTop = A.Number(A.Call(frame.header.GetTop, frame.header))
+            if iconTop and nameTop then clearance = math.max(0, iconTop - nameTop) end
+        end
+        return frame.bar, frame.header, clearance, frame.levelBadge
+    end
 end
 
 function A.Add(unit)
@@ -292,8 +311,6 @@ local function render(record, now)
         child.count:SetText(aura.count > 1 and aura.count or ""); child:Show()
     end
     for i = count + 1, #f.icons do f.icons[i]:Hide() end
-    local knife = A.QuestKills.GetTexture(record.guid, name, now)
-    f.questKill:SetTexture(knife); f.questKill:SetShown(knife ~= nil)
     -- Keep the requested 2x base height. All geometry belongs to this addon;
     -- Blizzard still owns overlap and click ordering between different mobs.
     local height = A.Number(A.Call(record.bounds.GetHeight, record.bounds)) or 0

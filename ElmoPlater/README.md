@@ -1,4 +1,4 @@
-# ElmoPlater 2.4.1
+# ElmoPlater 2.5.0
 
 Classic Era / Forever nameplates with solid reaction colours, contrasting
 borders, health percentage, mana, casting, difficulty-coloured levels and your harmful debuffs.
@@ -12,7 +12,7 @@ can still display health bars and percentages through Blizzard-supported display
 APIs, but addon code cannot inspect or compare those protected values to rank
 mobs by health. For this reason, the rule system, custom target-priority ordering
 and experimental health-based layers have been removed. Nameplates, health
-percentages, personal debuffs and quest-kill markers remain available. This
+percentages and personal debuffs remain available. This
 simplification applies to both clients because they share the same codebase.
 
 ## Changes in 2.3.0
@@ -34,7 +34,6 @@ bar geometry or targeting.
 
 Open **Options > AddOns > ElmoPlater**, or `/eplater` (`/elmoplater`), for:
 
-- Show/hide the quest kill knife.
 - Debuff icon size, from 14 to 36 pixels.
 - Show/hide caster NPC mana bars.
 - Show/hide mob casting bars.
@@ -84,24 +83,7 @@ players' and pet debuffs are excluded. Restricted or unavailable raw aura data
 is skipped. No spellbook, learned-debuff catalogue or combat log is needed to
 display auras.
 
-## Quest kill marker
-
-A 16-pixel knife appears four pixels to the left of the health bar when the mob
-matches an unfinished kill objective in your active quest log. It disappears
-when the objective or quest is complete, or the quest is abandoned. Item-drop
-bags are not shown.
-
-Use `/eplater questkills off` to disable the knife, `/eplater questkills on`
-to enable it, or `/eplater questkills` to report its state. The setting defaults
-to enabled. Disabling it stops quest scans and immediately hides existing knives.
-
-Both clients use the native quest log and Blizzard's localized kill wording;
-Questie is not required or read. Creature names must match the objective exactly.
-Group objectives such as "Troggs slain" cannot reliably identify individual
-creatures without a database, so ambiguous matches are omitted. Private or
-unavailable data is skipped and retried. Legacy collapsed headers and selected
-quests are restored after discovery; cached quest IDs avoid repeating expansions
-on progress updates.
+Quest kill markers are available in [ElmoLeveling](../ElmoLeveling).
 
 ## Native frame boundaries
 
@@ -112,6 +94,6 @@ Global nameplate dimensions and stacking settings are not changed during normal
 operation. Current packages contain only ElmoPlater.
 
 Source and installed-package checks use Lua 5.1 mocks in
-`scripts/tests/ElmoPlater`. These verify geometry, auras, opaque HP display, quest
-markers, cleanup and absence of retired dependencies; live rendering and overlap
+`scripts/tests/ElmoPlater`. These verify geometry, auras, opaque HP display,
+cleanup and absence of retired dependencies; live rendering and overlap
 behaviour remain subject to in-game testing. See `SOURCES.md` for API references.

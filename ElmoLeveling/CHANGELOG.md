@@ -1,3 +1,34 @@
+# 2.4.0
+
+Integrated ElmoWaypoint's saved points, circular map pins, live coordinates
+and minimap launcher. The shared direction arrow follows an active waypoint
+first and resumes quest guidance after arrival or pause. The quest arrow
+hides in the objective area when the client supplies native area membership.
+Waypoint options are under ElmoLeveling in the AddOns menu. Right-click its
+minimap launcher to clear the current destination and keep all saved points.
+World map and minimap pin tooltips show the note, zone and coordinates.
+Existing per-character waypoints and coordinate/minimap preferences import
+when ElmoWaypoint 1.2.1 and ElmoLeveling are loaded together.
+
+# 2.3.0
+
+Moved quest kill markers from ElmoPlater into ElmoLeveling. Visible kill targets
+get objective progress, a knife and a large Blizzard quest **!** marker.
+The marker appears on each matching visible nameplate, even without a target.
+When Blizzard's unit tooltip links a mob to an unfinished item objective, it
+also gets a bag with its progress and the same marker.
+The marker is centered above the nameplate and its auras.
+The quest mob icons and progress sit to the right of the level badge.
+Added a top compass and original shaded arrow for watched quest
+destinations. Hover a compass pin for quest names and unfinished kill targets.
+The ground beam follows Blizzard's selected quest projection and respects
+existing manual waypoints. Quest guidance appears at the top of the AddOns
+panel with separate switches for the progress badges, nameplate marker, compass, arrow
+and ground beacon.
+
+The compass remains visible without a quest destination. Tracked quests also
+use Blizzard's map-specific navigation waypoint when the quest pin is missing.
+
 # 2.2.3
 
 Always include days in the header Time value using `Dgg HH:MM:SS`, for example

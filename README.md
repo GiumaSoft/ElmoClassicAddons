@@ -4,15 +4,15 @@ One source project for the locally maintained Elmo addon family. Interface and m
 
 | Addon | Release | Clients |
 | --- | --- | --- |
-| ElmoLeveling | 2.2.3 | Classic Era 11509, Forever 16001 |
-| ElmoPlater | 2.4.1 | Classic Era 11509, Forever 16001 |
+| ElmoLeveling | 2.4.0 | Classic Era 11509, Forever 16001 |
+| ElmoPlater | 2.5.0 | Classic Era 11509, Forever 16001 |
 | ElmoSpellTracker | 1.0.4 | Classic Era 11509, Forever 16001 |
 | ElmoQuestEnhanced | 1.2.1 | Classic Era 11509, Forever 16001 |
 | ElmoLFG | 1.4.4 | Classic Era 11509, Forever 16001 |
 | ElmoLFM | 1.0.8 | Classic Era 11509, Forever 16001 |
 | ElmoRare | 1.0.0 | Classic Era 11509, Forever 16001 |
 | ElmoBuff | 1.0.2 | Classic Era 11509, Forever 16001 |
-| ElmoWaypoint | 1.2.0 | Classic Era 11509, Forever 16001 |
+| ElmoWaypoint (deprecated) | 1.2.1, migration to ElmoLeveling | Classic Era 11509, Forever 16001 |
 
 `ElmoLeveling/` is the single implementation shared by both clients. `Compat.lua` and `TalentBranches.lua` adapt available APIs; `scripts/build.py` generates the small `Client.lua` selector and each client manifest. All other runtime files are identical between the two packages. The other addons also share their runtime across both clients. ElmoQuestEnhanced has an Options > AddOns panel for quest completions, multi-objective completions and optional kill/item progress reports to the current group. Client restrictions are preserved: unavailable combat-log timing is not fabricated.
 
@@ -62,7 +62,7 @@ players once and optionally invites contacted players who reply inv. Open
 Right-clicking a player row requests a direct group invitation.
 Its independent Lua 5.1 checks are in `scripts/tests/ElmoLFM/test_addon.py`.
 
-ElmoLeveling 2.2.3 uses the Sigillo layout: a circular level/XP seal, current zone,
+ElmoLeveling uses the Sigillo layout: a circular level/XP seal, current zone,
 rested XP and general-purpose free bag space. A header clock shows elapsed online
 time; remaining XP appears once below the subzone in a 15-point caption. The
 antialiased seal uses generated artwork and the native radial renderer when
@@ -76,10 +76,8 @@ equipment upgrade borders retain their rules; class/specialization mappings,
 weights and comparison formulas are in `ElmoLeveling/UPGRADE_RULES.md`.
 Comparisons ignore applied enchants on both items while preserving random suffixes.
 
-ElmoWaypoint adds `/way x y [note]`, circular map/minimap pins with note tooltips,
-a movable directional arrow, a live coordinate frame and a minimap launcher.
-`/way current [note]` saves the character's exact current position. Right-click
-the launcher for native options and Reset all waypoints.
-Points and preferences are saved per character. `/ewp` is an unambiguous alias;
-TomTom retains its alternative commands. See `ElmoWaypoint/README.md` and
-`scripts/tests/ElmoWaypoint/test_addon.py`.
+ElmoLeveling also handles `/way x y [note]`, `/way current [note]`, circular
+world-map/minimap pins with note tooltips and a movable coordinates frame.
+Manual waypoints use its quest arrow and remain saved after arrival. To import
+points from ElmoWaypoint, load version 1.2.1 alongside ElmoLeveling once per
+character. See `ElmoLeveling/README.md`.

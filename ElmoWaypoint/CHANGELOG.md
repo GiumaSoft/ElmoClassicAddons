@@ -1,3 +1,8 @@
+# 1.2.1 — Deprecated
+
+When paired with ElmoLeveling 2.4.0, allows ElmoLeveling to import the saved
+waypoints on login or reload and leaves navigation to its compass and arrow.
+
 # 1.2.0
 
 Added `/way current [note]` to save an exact waypoint at the character's current

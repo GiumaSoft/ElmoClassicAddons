@@ -1,6 +1,6 @@
 local addonName, A = ...
 ElmoPlater = A
-A.version, A.records, A.units = "2.4.1", {}, {}
+A.version, A.records, A.units = "2.5.0", {}, {}
 A.nativeAlpha = setmetatable({}, {__mode = "k"})
 A.frame = CreateFrame("Frame")
 
@@ -84,25 +84,12 @@ function A.AuraStatus()
 end
 
 function A.Command(msg)
-    local command, value = (msg or ""):match("^%s*(%S*)%s*(.-)%s*$")
+    local command = (msg or ""):match("^%s*(%S*)")
     command = command:lower()
     if command == "" or command == "config" or command == "settings" then
         A.Settings.Open()
     elseif command == "auras" then
         A.AuraStatus()
-    elseif command == "questkills" then
-        value = value:lower()
-        if value == "on" or value == "off" then
-            A.db.questKills = value == "on"
-            A.QuestKills.Invalidate()
-        elseif value ~= "" then
-            A.Print("Usage: /eplater questkills on|off")
-            return
-        end
-        A.Print("Quest kill marker: " .. (A.db.questKills and "enabled" or "disabled") ..
-            ". /eplater questkills on|off")
-        A.Update(false)
-        return
     elseif command == "status" then
         local visible, custom, private = 0, 0, 0
         for _, record in pairs(A.units) do
@@ -126,7 +113,7 @@ function A.Command(msg)
             end
         end
     else
-        A.Print("/eplater: options. /eplater questkills on|off: quest knife. /eplater status | auras: diagnostics.")
+        A.Print("/eplater: options. /eplater status | auras: diagnostics.")
     end
     A.Update(true)
 end
@@ -140,7 +127,7 @@ function A.Initialize()
     -- Retire settings used only by the removed priority engine.
     A.db.rules, A.db.ruleSchema, A.db.watchDebuff, A.db.learnedDebuffs = nil, nil, nil, nil
     A.db.plateAuraSize = math.max(14, math.min(36, A.Number(A.db.plateAuraSize) or 22))
-    A.db.questKills = A.db.questKills ~= false
+    A.db.questKills = nil
     A.db.showMana = A.db.showMana ~= false
     A.db.showCast = A.db.showCast ~= false
     A.Settings.RegisterOptions()
@@ -163,7 +150,7 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
         if event == "NAME_PLATE_UNIT_ADDED" then A.Add(unit)
         elseif event == "NAME_PLATE_UNIT_REMOVED" then A.Remove(unit)
         elseif event == "PLAYER_LOGOUT" or event == "PLAYER_LEAVING_WORLD" then A.Clear()
-        elseif event == "PLAYER_ENTERING_WORLD" then A.QuestKills.Invalidate(true); A.Scan()
+        elseif event == "PLAYER_ENTERING_WORLD" then A.Scan()
         elseif event == "CVAR_UPDATE" then
             if A.Text(unit) and unit:lower():match("^nameplate") then
                 for _, record in pairs(A.units) do record.clickBound, record.clickFailed = false, false end
@@ -171,11 +158,6 @@ A.frame:SetScript("OnEvent", function(_, event, unit)
         elseif event == "UNIT_AURA" then A.lastAuraUnit = A.Text(unit); A.Update(true, unit)
         elseif event == "PLAYER_TARGET_CHANGED" then A.Update(true, "target")
         elseif event == "PLAYER_REGEN_DISABLED" then A.Update(true)
-        elseif event == "QUEST_LOG_UPDATE" or event == "QUEST_ACCEPTED" or event == "QUEST_REMOVED" or
-            event == "QUEST_TURNED_IN" or event == "QUEST_AUTOCOMPLETE" or event == "QUEST_DATA_LOAD_RESULT" then
-            if A.QuestKills.Invalidate(event ~= "QUEST_LOG_UPDATE" and event ~= "QUEST_DATA_LOAD_RESULT") then
-                A.Update(false)
-            end
         else A.Update(false) end
     end
 end)
@@ -187,8 +169,7 @@ for _, event in ipairs({"ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_REGEN_ENABLED", 
     "UNIT_SPELLCAST_CHANNEL_UPDATE", "UNIT_SPELLCAST_CHANNEL_STOP",
     "UNIT_SPELLCAST_INTERRUPTIBLE", "UNIT_SPELLCAST_NOT_INTERRUPTIBLE",
     "PLAYER_TARGET_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT",
-    "CVAR_UPDATE", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_REMOVED", "QUEST_TURNED_IN",
-    "QUEST_AUTOCOMPLETE", "QUEST_DATA_LOAD_RESULT"}) do
+    "CVAR_UPDATE"}) do
     A.Call(A.frame.RegisterEvent, A.frame, event)
 end
 A.frame:SetScript("OnUpdate", function(_, dt)

@@ -19,8 +19,8 @@ class LevelingTests(unittest.TestCase):
         namespace.flavor = "forever"
         load = self.vm.eval('function(s, n, ns) assert(loadstring(s, "@" .. n))("ElmoLeveling", ns) end')
         for name in (ADDON / "ElmoLeveling.toc").read_text().splitlines():
-            if name.endswith(".lua"):
-                load((ADDON / name).read_text(), name, namespace)
+            if name.endswith(".lua") and not name.startswith("Libs"):
+                load((ADDON / name.replace("\\", "/")).read_text(), name, namespace)
         self.vm.globals().A = namespace
 
 
@@ -819,11 +819,11 @@ class LevelingTests(unittest.TestCase):
         assert(A.UI.levelRows[1].status:GetText()=='Max level')
         MOCK.advance(3600);assert(A.Stats().totalXP==100)""")
 
-    def test_hidden_meter_continues_tracking_without_mob_events(self):
+    def test_hidden_meter_continues_tracking_without_combat_events(self):
         self.check("""MOCK.start();A.Command('hide');MOCK.advance(80);MOCK.gain(30)
         assert(A.Stats().totalXP==30 and not A.UI.panel:IsShown())
         for _,event in ipairs({'COMBAT_LOG_EVENT_UNFILTERED','CHAT_MSG_COMBAT_XP_GAIN','PLAYER_TARGET_CHANGED',
-            'UPDATE_MOUSEOVER_UNIT','NAME_PLATE_UNIT_ADDED','UNIT_HEALTH','PLAYER_REGEN_DISABLED'})do
+            'UPDATE_MOUSEOVER_UNIT','UNIT_HEALTH','PLAYER_REGEN_DISABLED'})do
             assert(not A.frame.events[event])
         end
         A.Command('show');assert(MOCK.plain(A.UI.nextLevel:GetText())=='270 XP to level 2')""")

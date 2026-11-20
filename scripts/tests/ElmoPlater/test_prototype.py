@@ -1,7 +1,7 @@
 from fixture import create_vm
 vm,ns=create_vm()
 vm.execute(r"""
-MOCK.start();assert(A.ready and A.version=='2.4.1')
+MOCK.start();assert(A.ready and A.version=='2.5.0')
 local a,pa=MOCK.mob('nameplate1','Creature-a','Murloc Streamrunner')
 local b,pb=MOCK.mob('nameplate2','Creature-b','Boar');pb.centerX=950
 assert(A.units.nameplate1 and pa.UnitFrame.alpha==0)
@@ -66,6 +66,10 @@ MOCK.nativeHeight=32;A.Update(false);geometry()
 for id=1001,1008 do MOCK.aura('nameplate2',id,20) end
 MOCK.event('UNIT_AURA','nameplate2');geometry()
 A.db.plateAuraSize=30;A.Update(false);geometry()
+local bar, upper, padding, badge = A.GetHealthAnchor('nameplate2', pb, b.guid)
+assert(bar==rb.frame.bar and upper==rb.frame.header and badge==rb.frame.levelBadge)
+assert(padding==rb.frame.icons[8]:GetTop()-upper:GetTop(),
+    'The above-plate attachment clears the last visible Classic aura row')
 b.auras={};MOCK.event('UNIT_AURA','nameplate2');geometry()
 A.db.plateAuraSize=22
 local c,pc=MOCK.mob('nameplate3','Creature-c','Untouched');pc.centerX=1300;c.health=1

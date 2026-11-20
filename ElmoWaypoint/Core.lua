@@ -1,6 +1,8 @@
 local addonName, A = ...
+-- ElmoLeveling consumes these SavedVariables on ADDON_LOADED.
+if ElmoLeveling and ElmoLeveling.Waypoints then return end
 ElmoWaypoint = A
-A.version, A.LIMIT = "1.2.0", 50
+A.version, A.LIMIT = "1.2.1", 50
 local frame, elapsed = CreateFrame("Frame"), 0
 A.frame = frame
 

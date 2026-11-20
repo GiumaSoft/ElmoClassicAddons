@@ -25,7 +25,7 @@ class WaypointTests(unittest.TestCase):
     def check(self,source):self.vm.execute(source)
 
     def test_standalone_start_registers_real_broker_and_native_options(self):
-        self.check("""MOCK.start();assert(A.version=='1.2.0' and A.ready and not A.UI.panel:IsShown())
+        self.check("""MOCK.start();assert(A.version=='1.2.1' and A.ready and not A.UI.panel:IsShown())
         assert(ElmoWaypointDB==A.db and #A.db.points==0 and not A.db.minimap.hide)
         assert(LibStub('LibDBIcon-1.0'):IsRegistered('ElmoWaypoint'))
         assert(A.Minimap.broker==LibStub('LibDataBroker-1.1'):GetDataObjectByName('ElmoWaypoint'))
@@ -344,5 +344,78 @@ class WaypointTests(unittest.TestCase):
 
 class LegacyWaypointTests(WaypointTests):
     legacy=True
+
+class IntegratedWaypointTests(unittest.TestCase):
+    def test_migrated_points_use_only_the_leveling_launcher_and_pins(self):
+        vm = LuaRuntime(unpack_returned_tuples=True)
+        vm.execute((HERE.parent / "ElmoLFM/wow_mock.lua").read_text())
+        vm.execute((HERE / "wow_mock.lua").read_text())
+        vm.execute("WOW_PROJECT_ID=WOW_PROJECT_CAMELOT; C_Minimap={GetViewRadius=function() return 233 end}")
+        load = vm.eval('function(s,n,a,ns) assert(loadstring(s,"@"..n))(a,ns) end')
+        leveling, standalone = vm.table(), vm.table()
+        vm.globals().ElmoLeveling = leveling
+        source = ADDON.parent / "ElmoLeveling"
+        for name in (source / "ElmoLeveling.toc").read_text().splitlines():
+            if name.endswith(".lua") and name.startswith(("Compat", "Libs", "Waypoints")):
+                load((source / name.replace("\\", "/")).read_text(), name, "ElmoLeveling", leveling)
+        for name in (ADDON / "ElmoWaypoint.toc").read_text().splitlines():
+            if name.endswith(".lua"):
+                load((ADDON / name.replace("\\", "/")).read_text(), name, "ElmoWaypoint", standalone)
+        self.assertIsNone(standalone.frame)
+        vm.execute("""
+            local A=ElmoLeveling
+            A.db={}; A.Print=function()end
+            local w=A.Waypoints
+            w.Init()
+            w.Import({points={{mapID=1,x=.55,y=.45,title='Keep this note'}},showArrow=false})
+            w.Coordinates.Create()
+            MOCK.fire('PLAYER_LOGIN')
+            w.Minimap.Register()
+            MOCK.browse(1)
+            w.Update(w.PlayerPosition())
+            assert(w.Coordinates.value:GetText()=='50.00, 50.00')
+            assert(not ElmoWaypoint and not ElmoWaypointArrow and not ElmoWaypointCoordinates)
+            local icons=LibStub('LibDBIcon-1.0')
+            assert(icons:IsRegistered('ElmoLeveling') and not icons:IsRegistered('ElmoWaypoint'))
+            local button=icons:GetMinimapButton('ElmoLeveling')
+            local click=button:GetScript('OnClick')
+            assert(w.Minimap.broker.text=='ElmoLeveling')
+            w.Minimap.broker.OnTooltipShow(GameTooltip)
+            assert(GameTooltip.lines[1]=='ElmoLeveling')
+            local pins=w.Pins.records[1]
+            assert(pins.world.ring.mask and pins.mini.ring.mask and #WorldMapFrame.pins==1)
+            for _, pin in ipairs({pins.world, pins.mini}) do
+                pin:GetScript('OnEnter')(pin)
+                assert(GameTooltip:GetText()=='Keep this note')
+                assert(GameTooltip.lines[1]=='Location: Duskwood')
+                assert(GameTooltip.lines[2]=='Coordinate: 55.00 45.00')
+                assert(GameTooltip.lines[3]==' ' and GameTooltip.lines[4]=='Left-click to navigate')
+            end
+            local waypoint=pins.world.waypoint
+            waypoint.title=''
+            pins.world:GetScript('OnEnter')(pins.world)
+            assert(GameTooltip:GetText()=='Location: Duskwood')
+            assert(GameTooltip.lines[1]=='Coordinate: 55.00 45.00')
+            waypoint.title='Keep this note'
+            pins.mini:GetScript('OnClick')(pins.mini)
+            assert(w.Active()==w.Current())
+            click(button,'LeftButton')
+            assert(not w.Active() and w.Current())
+            click(button,'LeftButton')
+            local point=assert(w.Active())
+            w.Settings.Open=function()error('Right-click must clear navigation')end
+            click(button,'RightButton')
+            assert(not w.Active() and not w.Current())
+            w.Update(w.PlayerPosition())
+            assert(#w.db.points==1 and w.db.points[1]==point and #WorldMapFrame.pins==1)
+            assert(pins.world.waypoint==point and pins.mini.waypoint==point and pins.world.ring.vertex[1]==.55)
+            click(button,'LeftButton')
+            assert(not w.Active())
+            w.Init()
+            assert(not w.Current() and w.db.points[1].title=='Keep this note')
+            w.Next()
+            assert(w.Current() and w.Active())
+        """)
+
 
 if __name__=='__main__':unittest.main()

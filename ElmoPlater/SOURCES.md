@@ -69,18 +69,12 @@ CurveConstants.ScaleTo100; no comparison or custom curve consumes those values:
 https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleStatusBarAPIDocumentation.lua
 https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_APIDocumentationGenerated/SimpleFontStringAPIDocumentation.lua
 
-QuestKills.lua reads native active quest IDs and C_QuestLog.GetQuestObjectives:
-https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bba/Interface/AddOns/Blizzard_APIDocumentationGenerated/QuestLogDocumentation.lua
-Only unfinished monster objectives matching Blizzard's localized
-QUEST_MONSTERS_KILLED wording qualify. Classic suffix and Forever prefix counters
-are supported. Public creature names must match exactly; item and interaction
-objectives are excluded. The texture is WoW's INV_Weapon_ShortBlade_05. No
-Questie data or assets are used. All plates share a half-second quest snapshot.
-Quest events invalidate it; legacy header discovery restores headers/selection.
+ElmoLeveling owns quest markers. ElmoPlater exposes its visible health-bar
+anchor for independent overlays and does not inspect the quest log.
 
 The Lua 5.1 tests in scripts/tests/ElmoPlater cover geometry isolation, fixed 2x
 height, native click containment, colours, header/debuff layout, pool cleanup,
-private health and aura display, native quest markers and settings retirement.
+private health and aura display, overlay anchoring and settings retirement.
 The reduced-runtime regression rejects combat-log registration/reads, threat,
 spellbook access and explicit SetFrameLevel calls on both clients. Native options
 are also checked by scripts/tests/test_options.py. These are simulated checks;

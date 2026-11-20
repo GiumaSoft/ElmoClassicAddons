@@ -21,6 +21,9 @@ function CreateFrame(kind,...)
   function f:SetChecked(value)self.checked=value==true end
   function f:GetChecked()return self.checked end
  end
+ if kind=='CheckButton' or kind=='Button' then
+  function f:SetEnabled(value)self.enabled=value==true end
+ end
  return f
 end
 SettingsPanel=CreateFrame('Frame')
@@ -35,6 +38,11 @@ end
 function Settings.RegisterVerticalLayoutCategory(name)
  local category=Settings.RegisterCanvasLayoutCategory(CreateFrame('Frame'),name)
  category.vertical=true;return category
+end
+function Settings.RegisterCanvasLayoutSubcategory(parent,panel,name)
+ local category={parent=parent,panel=panel}
+ function category:GetID()return name end
+ return category
 end
 function Settings.RegisterAddOnCategory(category)category.addon=true end
 function Settings.RegisterAddOnSetting(category,variable,key,db,kind,label,default)
@@ -113,9 +121,9 @@ def load_addon(addon, forever):
     loader = vm.eval('function(s,n,name,ns)assert(loadstring(s,"@"..n))(name,ns)end')
     source = CLIENT_ROOT / addon
     names = ('Data.lua', 'Core.lua', 'Roles.lua', 'Theme.lua', 'UI.lua') if addon == 'ElmoLFG' else (
-        line for line in (source / (addon + '.toc')).read_text().splitlines() if line.endswith('.lua'))
+        line for line in (source / (addon + '.toc')).read_text().splitlines() if line.endswith('.lua') and not (addon == 'ElmoLeveling' and line.startswith('Libs')))
     for name in names:
-        loader((source / name).read_text(), name, addon, ns)
+        loader((source / name.replace("\\", "/")).read_text(), name, addon, ns)
     if addon == 'ElmoLeveling':
         ns.flavor = 'forever' if forever else 'classic'
         vm.execute('MOCK.start()')
@@ -149,14 +157,34 @@ class OptionsTests(unittest.TestCase):
             p.expanded:SetChecked(true);optionsClick(p.expanded);assert(A.db.levelExpanded)
             A.db.xp=123;optionsClick(p.clear);assert(A.db.xp==123 and #A.db.levels==0)
             optionsClick(p.reset);assert(A.db.xp==0)
-            A.Command('unlock');p=optionsShow('ElmoLeveling');assert(not p.locked:GetChecked())''')
+            A.Command('unlock');p=optionsShow('ElmoLeveling');assert(not p.locked:GetChecked())
+            openedCategory=nil;optionsClick(A.UI.menu);assert(openedCategory=='ElmoLeveling')
+            local keys={'questMobMarks','questMobBeam','questCompass','questArrow','questBeam'}
+            for _,key in ipairs(keys) do
+                assert(p[key]:GetChecked())
+                p[key]:SetChecked(false);optionsClick(p[key]);assert(A.db[key]==false)
+            end
+            p=optionsShow('ElmoLeveling')
+            for _,key in ipairs(keys) do assert(not p[key]:GetChecked()) end
+            p.questArrow:SetChecked(true);optionsClick(p.questArrow)
+            assert(A.db.questArrow and not A.db.questCompass and not A.db.questBeam)''')
+
+    def test_waypoints_options_are_a_subcategory(self):
+        for forever in (False, True):
+            vm = load_addon('ElmoLeveling', forever)
+            vm.execute("""local w=A.Waypoints;local s=w.Settings
+            assert(s.category.parent==A.UI.optionsCategory)
+            w.Command('options');assert(openedCategory=='Waypoints')
+            local p=s.panel;p:Show();p:GetScript('OnShow')()
+            p.showCoordinates:SetChecked(false);optionsClick(p.showCoordinates)
+            assert(not w.db.showCoordinates and not w.Coordinates.panel:IsShown())
+            assert(not p.showArrow.enabled and not p.reset.enabled)""")
 
     def test_plater_knife_icon_size_and_native_options(self):
         for forever in (False, True):
             vm = load_addon('ElmoPlater', forever)
             vm.execute('''local p=optionsShow('ElmoPlater')
-            p.questKills:SetChecked(false);optionsClick(p.questKills);assert(not A.db.questKills)
-            A.Command('questkills on');p=optionsShow('ElmoPlater');assert(p.questKills:GetChecked())
+            assert(p.questKills==nil and A.db.questKills==nil)
             p.auraSize:SetText('30');optionsClick(p.apply);assert(A.db.plateAuraSize==30)
             p.auraSize:SetText('99');optionsClick(p.apply);assert(A.db.plateAuraSize==30 and p.auraSize:GetText()=='30')
             assert(p.showMana:GetChecked() and p.showCast:GetChecked())

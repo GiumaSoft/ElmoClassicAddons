@@ -71,6 +71,8 @@ local container = record.auraContainer
 assert(container and container.enabled and container.unit=='nameplate2' and container:IsShown())
 assert(container.parent==record.frame and MOCK.iconBound)
 assert(container.points[1][1]=='BOTTOM' and container.points[1][3]=='TOP')
+local bar, upper, padding, badge = A.GetHealthAnchor('nameplate2', plate, mob.guid)
+assert(bar==record.frame.bar and upper==container and padding>=14 and badge==record.frame.levelBadge)
 MOCK.units.target = mob
 MOCK.aura('nameplate2',589,10)
 MOCK.event('UNIT_AURA','target')
@@ -87,6 +89,10 @@ assert(MOCK.blockedQueries==0, 'No forbidden raw aura query may be attempted')
 -- Scale only the public container, never its adopted buttons.
 A.db.plateAuraSize=36; A.Update(false)
 assert(container.scale==36/22 and container.frameLevel==nil)
+container.GetScale = function(self) return self.scale end
+container.GetTop = function() error('Do not read restricted aura geometry') end
+bar, upper, padding, badge = A.GetHealthAnchor('nameplate2', plate, mob.guid)
+assert(upper==container and padding==14*36/22 and badge==record.frame.levelBadge)
 A.Command('auras')
 assert(MOCK.blockedQueries==0)
 assert(A.db.auraDiagnostic[2]=='Aura display: Blizzard container')

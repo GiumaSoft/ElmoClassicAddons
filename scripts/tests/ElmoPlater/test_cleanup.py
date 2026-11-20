@@ -9,10 +9,13 @@ ElmoPlaterDB={rules={{kind='lowest_health'}},ruleSchema=2,watchDebuff='Rend',
     learnedDebuffs={[772]={id=772,name='Rend'}},questKills=false,plateAuraSize=30}
 local saved=ElmoPlaterDB
 MOCK.start()
-assert(A.db==saved and not A.db.questKills and A.db.plateAuraSize==30)
+assert(A.db==saved and A.db.questKills==nil and A.db.plateAuraSize==30)
 assert(A.db.rules==nil and A.db.ruleSchema==nil and A.db.watchDebuff==nil and A.db.learnedDebuffs==nil)
 local mob,plate=MOCK.mob('nameplate1','Creature-cleanup','Enemy')
 local record=A.units.nameplate1
+assert(not record.frame.questKill and not A.QuestKills)
+assert(A.GetHealthAnchor('nameplate1',plate,mob.guid)==record.frame.bar)
+assert(not A.GetHealthAnchor('nameplate1',plate,'Creature-other'))
 assert(record.frame:IsShown()and record.frame.bar.value==1)
 local _,_,_,height=MOCK.worldRect(record.frame)
 mob.health=10;MOCK.units.target=mob;MOCK.event('PLAYER_TARGET_CHANGED')
@@ -23,7 +26,7 @@ A.Initialize();assert(A.db==saved and A.db.rules==nil)
 ''')
 
 addon=Path(os.environ.get('ELMO_TEST_ADDON',Path(__file__).resolve().parents[3]/'ElmoPlater'))
-retired={'Rules.lua','Conditions.lua','ConditionEditor.lua','Dropdown.lua','Spells.lua'}
+retired={'Rules.lua','Conditions.lua','ConditionEditor.lua','Dropdown.lua','Spells.lua','QuestKills.lua'}
 manifest=(addon/'ElmoPlater.toc').read_text()
 for name in retired:
     assert name not in manifest and not (addon/name).exists(), name

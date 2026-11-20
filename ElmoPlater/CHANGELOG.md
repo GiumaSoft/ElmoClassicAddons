@@ -1,3 +1,9 @@
+# 2.5.0
+
+Moved quest markers to ElmoLeveling. Removed ElmoPlater's quest scanner,
+knife, command and option. Exposes the visible health-bar anchor so other
+addons can position their own overlays.
+
 # 2.4.1
 
 Show mana only for NPCs with a readable spellcasting class and mana power type.

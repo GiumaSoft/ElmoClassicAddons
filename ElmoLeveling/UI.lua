@@ -125,21 +125,36 @@ function U.RegisterOptions()
         c:SetScript("OnClick", function(self) change(self:GetChecked() == true) end)
         return c
     end
-    p.visible = check("Show tracker", -80, A.SetVisible)
-    p.locked = check("Lock tracker position", -114, A.SetLocked)
-    p.expanded = check("Show details: time per level and bag contents", -148, function(value) A.db.levelExpanded = value; U.RefreshLevels() end)
+    local function questOption(key, caption, y, update)
+        p[key] = check(caption, y, function(value) A.db[key] = value; update() end)
+    end
+    local function updateNavigation()
+        A.QuestNavigation.Invalidate(); A.QuestNavigation.Update()
+    end
+    label(p, 15, "Quest guidance", SERIF):SetPoint("TOPLEFT", 16, -76)
+    questOption("questMobMarks", "Quest mob icons and progress", -99, A.QuestMarkers.Update)
+    questOption("questMobBeam", "Quest mob marker (!) above nameplates", -129, A.QuestMarkers.Update)
+    questOption("questCompass", "Quest compass", -159, updateNavigation)
+    questOption("questArrow", "Direction arrow (waypoints and quests)", -189, updateNavigation)
+    questOption("questBeam", "Ground beacon at the tracked quest destination", -219, updateNavigation)
+
+    label(p, 15, "Tracker", SERIF):SetPoint("TOPLEFT", 16, -265)
+    p.visible = check("Show tracker", -288, A.SetVisible)
+    p.locked = check("Lock tracker position", -318, A.SetLocked)
+    p.expanded = check("Show details: time per level and bag contents", -348, function(value) A.db.levelExpanded = value; U.RefreshLevels() end)
     local function action(value, y, fn)
         local b = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
         b:SetPoint("TOPLEFT", 16, y); b:SetSize(240, 26); b:SetText(value); b:SetScript("OnClick", fn)
         return b
     end
-    p.center = action("Center and show tracker", -196, function() A.Command("center"); p.visible:SetChecked(true) end)
-    p.reset = action("Restart session", -234, A.Reset)
-    p.clear = action("Clear completed level history", -272, function() A.Levels.ClearHistory(); U.levelOffset = 0; U.RefreshLevels() end)
-    label(p, 12, "All online time counts, including idle and out-of-combat time."):SetPoint("TOPLEFT", 16, -324)
-    label(p, 12, "Restart preserves level timing and history. Equipment upgrade rules are unchanged."):SetPoint("TOPLEFT", 16, -348)
+    p.center = action("Center and show tracker", -389, function() A.Command("center"); p.visible:SetChecked(true) end)
+    p.reset = action("Restart session", -423, A.Reset)
+    p.clear = action("Clear completed level history", -457, function() A.Levels.ClearHistory(); U.levelOffset = 0; U.RefreshLevels() end)
     p:SetScript("OnShow", function()
         p.visible:SetChecked(not A.db.hidden); p.locked:SetChecked(A.db.locked); p.expanded:SetChecked(A.db.levelExpanded)
+        for _, key in ipairs({"questMobMarks", "questMobBeam", "questCompass", "questArrow", "questBeam"}) do
+            p[key]:SetChecked(A.db[key])
+        end
     end)
     if Settings and Settings.RegisterCanvasLayoutCategory then
         U.optionsCategory = Settings.RegisterCanvasLayoutCategory(p, "ElmoLeveling"); Settings.RegisterAddOnCategory(U.optionsCategory)

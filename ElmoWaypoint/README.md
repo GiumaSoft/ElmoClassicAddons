@@ -1,4 +1,12 @@
-# ElmoWaypoint 1.2.0
+# ElmoWaypoint 1.2.1 (Deprecated)
+
+Waypoint navigation now lives in [ElmoLeveling 2.4.0](../ElmoLeveling/README.md).
+ElmoWaypoint 1.2.1 is the final standalone version and provides the migration
+for existing users. Enable both addons and log in or reload once on each
+character. After the saved pins appear in ElmoLeveling, disable ElmoWaypoint.
+New users only need ElmoLeveling.
+
+The standalone features below apply when ElmoLeveling is absent or disabled.
 
 A small waypoint addon for **Classic Era 1.15.9** and **WoW Forever 1.60.1**,
 with a directional arrow, circular map/minimap pins, notes, live coordinates

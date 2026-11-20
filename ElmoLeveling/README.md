@@ -1,4 +1,4 @@
-# ElmoLeveling 2.2.3
+# ElmoLeveling 2.4.0
 
 The **Sigillo** leveling tracker for **Classic Era 1.15.9** and **WoW Forever
 1.60.1**: a compact aristocratic layout, live location and level progress,
@@ -30,6 +30,56 @@ keeping the panel width and top edge. Four level entries are visible per page;
 scroll or use Up/Down to reach the rest. Lock/Unlock and Restart are in Details.
 The **...** menu opens **Options > AddOns > ElmoLeveling**. Drag the header when
 unlocked to move the tracker; the saved position is retained across reload/login.
+
+## Quest guidance
+
+An unfinished kill objective puts a knife and `done/required` to the right of
+the visible mob's nameplate, after the level badge when available. When
+Blizzard's unit tooltip identifies an unfinished item objective for the mob,
+a bag and its progress appear there as well. The badges go away on death,
+completion or loss of the nameplate. Kill objectives phrased as a group name
+need an exact creature name match.
+
+The compass shows cardinal directions whenever enabled and adds pins for
+watched quests with native map locations. Hover a **!** to see the quest name
+and its unfinished kill targets and progress, when available. The arrow
+uses the active manual waypoint first. When no waypoint is active, it points
+toward the selected quest, or the nearest watched quest with a known location.
+It hides while Blizzard reports that you are inside the indicated quest's
+objective area and resumes on exit if the quest is still unfinished.
+
+Each visible creature that matches an unfinished kill or item objective in your
+quest log gets a large **!** marker centered above its nameplate and aura timers.
+It works for all active quests, including unwatched quests, and each mob gets
+its own marker regardless of your current target. The quest destination beam
+uses Blizzard's screen projection for the selected quest when available.
+
+Open **Options > AddOns > ElmoLeveling** or click **...** on the tracker.
+The **Quest guidance** controls independently toggle the mob icons and progress,
+the nameplate marker, the compass, the directional arrow, and the ground beacon.
+Use `/elvl questkills on` or `/elvl questkills off` to toggle both mob markers in chat.
+
+## Waypoints
+
+- `/way x y [note]` saves and follows a point in your current zone. `/way current [note]`
+  saves your exact position.
+- Click a circular pin on the world map or minimap to follow it. Hover the pin
+  to see its note and coordinates.
+- `/ewp pause` hands the arrow back to quest guidance. `/ewp resume` follows the
+  selected point again. `/ewp next` cycles through the saved points.
+- The direction arrow returns to quests after reaching a waypoint. The point
+  remains saved, and the addon waits for you to choose another destination.
+- On the **ElmoLeveling** minimap icon, left-click pauses or resumes the
+  selected waypoint. Right-click clears the selection and returns to quest
+  guidance. Saved points stay on the map and minimap.
+- Open **Options > AddOns > ElmoLeveling > Waypoints** or use `/ewp options`
+  to manage saved points, the compass, the coordinates frame and the launcher.
+
+Up to 50 waypoints are saved per character. When ElmoWaypoint 1.2.1 is enabled
+alongside ElmoLeveling, the old points, their notes and selection, and the
+coordinate and minimap preferences migrate automatically on that character's
+next login or reload. ElmoLeveling supplies the compass and arrow. Once the
+points appear, ElmoWaypoint can be disabled for that character.
 
 ## Session clock and XP remaining
 
